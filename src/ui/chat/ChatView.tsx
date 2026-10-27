@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Download, Eraser, MoreHorizontal } from 'lucide-react'
 import type { Conversation, Message } from '../../store/store'
 import { useAppStore } from '../../store/StoreProvider'
@@ -80,14 +80,13 @@ function ChatHeader({ conv }: { conv: Conversation }) {
   )
 }
 
-/** Messages already present when the list mounted (e.g. on conversation switch) appear without the rise. */
-function MessageList({ messages }: { messages: Message[] }) {
+/** Only turns created after the chat view mounted rise in; history (reloads, conversation switches) appears at rest. */
+function MessageList({ messages, since }: { messages: Message[]; since: number }) {
   const reduced = useReducedMotion()
-  const initial = useRef(new Set(messages.map((m) => m.id)))
   return (
     <div className="msgs">
       {messages.map((m) => (
-        <MessageView key={m.id} message={m} fresh={!reduced && !initial.current.has(m.id)} />
+        <MessageView key={m.id} message={m} fresh={!reduced && m.createdAt >= since} />
       ))}
     </div>
   )
@@ -100,6 +99,7 @@ export function ChatView() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const stick = useRef(true)
   const count = useRef(messages.length)
+  const [since] = useState(() => Date.now())
 
   // Follow the stream while the reader is at the bottom; a new turn always scrolls into view.
   useLayoutEffect(() => {
@@ -125,7 +125,7 @@ export function ChatView() {
         {conv && messages.length > 0 && <ChatHeader conv={conv} />}
         <div className="chat__scroll" ref={scrollRef} onScroll={onScroll}>
           {conv && messages.length > 0 ? (
-            <MessageList key={conv.id} messages={messages} />
+            <MessageList messages={messages} since={since} />
           ) : (
             <EmptyState onAsk={(q) => void send(q)} />
           )}
