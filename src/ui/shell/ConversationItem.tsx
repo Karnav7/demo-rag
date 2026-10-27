@@ -83,7 +83,10 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
           onChange={(e) => setDraft(e.target.value)}
           onBlur={() => setMode('idle')}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commit()
+            }
             else if (e.key === 'Escape') {
               e.stopPropagation()
               close()
