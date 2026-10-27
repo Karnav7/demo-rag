@@ -17,6 +17,17 @@
   --glow: none;
   --font-head: Georgia, 'Times New Roman', serif;
   --head-weight: 400;
+  --node-Person: #5f7a99;
+  --node-Company: #8a7550;
+  --node-Account: #5e8a6e;
+  --node-Transaction: #8f7aa8;
+  --node-Address: #9a8f7d;
+  --node-Device: #5f8b8f;
+  --node-SanctionsEntry: #a8453b;
+  --node-Jurisdiction: #7d6b5a;
+  --node-Regulation: #6b6f8a;
+  --node-Case: #a8687a;
+  --node-Alert: #c08a2e;
 }
 
 :root[data-theme='dark'] {
@@ -38,6 +49,17 @@
   --glow: 0 0 28px rgba(124, 140, 255, 0.18);
   --font-head: Inter, system-ui, sans-serif;
   --head-weight: 600;
+  --node-Person: #8fb3e0;
+  --node-Company: #d9b77a;
+  --node-Account: #86c7a0;
+  --node-Transaction: #d0a3d9;
+  --node-Address: #a9a39a;
+  --node-Device: #7cc3c7;
+  --node-SanctionsEntry: #ff8a8a;
+  --node-Jurisdiction: #c2a58a;
+  --node-Regulation: #a0a8c0;
+  --node-Case: #e3a0b0;
+  --node-Alert: #f0b36e;
 }
 
 :root {

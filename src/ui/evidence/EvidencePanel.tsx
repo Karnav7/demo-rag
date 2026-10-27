@@ -4,7 +4,8 @@ import type { ChatResponse } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { CypherView } from './CypherView'
 import { FactsTable } from './FactsTable'
-import { GraphViews } from './GraphSlot'
+import { GraphViews } from '../graph/GraphViews'
+import { firstCitedSection } from '../graph/graphStyle'
 import { HelpPopover } from './HelpPopover'
 import { SourcesList } from './SourcesList'
 import { TraceSteps } from './TraceSteps'
@@ -25,12 +26,15 @@ export function EvidencePanel({
   tab,
   onTab,
   highlightSectionId,
+  onOpenSection,
 }: {
   response: ChatResponse | null
   tab: EvidenceTab
   onTab(t: EvidenceTab): void
   /** Section to mark in the Sources tab (set by citation clicks). */
   highlightSectionId?: string
+  /** A graph node was opened: reveal this section in Sources (the citation-click path). */
+  onOpenSection?(sectionId: string): void
 }) {
   const reduced = useReducedMotion()
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -86,7 +90,16 @@ export function EvidencePanel({
             exit={{ opacity: 0 }}
             transition={fade}
           >
-            {tab === 'graph' && <GraphViews subgraph={response.subgraph} highlightSectionId={highlightSectionId} />}
+            {tab === 'graph' && (
+              <GraphViews
+                subgraph={response.subgraph}
+                trace={response.trace}
+                onNodeOpen={(id) => {
+                  const s = firstCitedSection(response.subgraph, id)
+                  if (s) onOpenSection?.(s)
+                }}
+              />
+            )}
             {tab === 'facts' && <FactsTable facts={response.facts} />}
             {tab === 'sources' && <SourcesList sources={response.sources} highlight={highlightSectionId} />}
             {tab === 'cypher' && <CypherView steps={response.cypher} trace={response.trace} />}

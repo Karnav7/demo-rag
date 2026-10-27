@@ -121,6 +121,24 @@ describe('Evidence', () => {
     }
   })
 
+  it('opening a graph node reports its first cited section; uncited nodes do nothing', async () => {
+    const onOpenSection = vi.fn()
+    const n = (id: string, name: string) => ({ id, label: 'Company' as const, name, props: {}, used: true, seed: false })
+    const subgraph = {
+      nodes: [n('a', 'Alpha Ltd'), n('b', 'Beta LLC'), n('c', 'Gamma Inc')],
+      edges: [
+        { id: 'r1', type: 'OWNS' as const, from: 'a', to: 'b', confidence: 0.9, section_id: 'sec-1', props: {}, used: true },
+        { id: 'r3', type: 'OWNS' as const, from: 'b', to: 'c', confidence: 0.9, section_id: null, props: {}, used: false },
+      ],
+    }
+    render(<EvidencePanel response={response({ subgraph })} tab="graph" onTab={() => {}} onOpenSection={onOpenSection} />)
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Beta LLC (Company)' }))
+    expect(onOpenSection).toHaveBeenCalledWith('sec-1')
+    await user.click(screen.getByRole('button', { name: 'Gamma Inc (Company)' }))
+    expect(onOpenSection).toHaveBeenCalledTimes(1)
+  })
+
   it('with no response reads "Ask a question to see its evidence."', () => {
     render(<Harness r={null} />)
     expect(screen.getByText('Ask a question to see its evidence.')).toBeInTheDocument()

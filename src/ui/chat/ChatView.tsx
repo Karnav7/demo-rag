@@ -113,7 +113,7 @@ function MessageList({ messages, since }: { messages: Message[]; since: number }
 }
 
 export function ChatView() {
-  const { conversations, activeId, send, selectedMessageId, highlight } = useAppStore()
+  const { conversations, activeId, send, selectedMessageId, highlight, setHighlight } = useAppStore()
   const conv = conversations.find((c) => c.id === activeId)
   const messages = conv?.messages ?? []
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -197,7 +197,13 @@ export function ChatView() {
             <X size={16} aria-hidden />
           </button>
         )}
-        <EvidencePanel response={response} tab={tab} onTab={setTab} highlightSectionId={sectionId} />
+        <EvidencePanel
+          response={response}
+          tab={tab}
+          onTab={setTab}
+          highlightSectionId={sectionId}
+          onOpenSection={(s) => selectedMessageId && setHighlight({ messageId: selectedMessageId, sectionId: s })}
+        />
       </aside>
     </div>
   )
