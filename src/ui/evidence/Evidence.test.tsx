@@ -209,6 +209,55 @@ describe('Evidence drawer (narrow)', () => {
     expect(opener).toHaveFocus()
   })
 
+  it('makes the page behind the open drawer inert', async () => {
+    const user = await mountAsked()
+    const chat = document.querySelector('section.chat')!
+    expect(chat).not.toHaveAttribute('inert')
+    await user.click(screen.getByRole('button', { name: 'Show evidence', expanded: false }))
+    expect(chat).toHaveAttribute('inert')
+    await user.keyboard('{Escape}')
+    expect(chat).not.toHaveAttribute('inert')
+  })
+
+  it('Escape in the help popover closes only the popover and returns focus to its button', async () => {
+    const user = await mountAsked()
+    await user.click(screen.getByRole('button', { name: 'Show evidence', expanded: false }))
+    const help = screen.getByRole('button', { name: 'What is this tab?' })
+    await user.click(help)
+    expect(screen.getByRole('note')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('note')).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Evidence' })).not.toHaveAttribute('inert')
+    expect(help).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(document.querySelector('aside.evidence')).toHaveAttribute('inert')
+  })
+
+  it('a highlight left over from before mount does not open the drawer', async () => {
+    fake()
+    narrow()
+    const clientFor = (): ChatClient => ({
+      async *chat() { yield { type: 'done' as const, response: response() } },
+    })
+    const store = createStore({ clientFor })
+    const ui = (
+      <StoreProvider store={store}>
+        <MemoryRouter><ChatView /></MemoryRouter>
+      </StoreProvider>
+    )
+    const first = render(ui)
+    const user = fakeSetup()
+    await user.type(screen.getByRole('textbox', { name: 'Ask a question' }), 'who owns beta')
+    await user.keyboard('{Enter}')
+    await settle()
+    await user.click(await screen.findByRole('button', { name: 'Source 1' }))
+    await settle()
+    expect(screen.getByRole('dialog', { name: 'Evidence' })).not.toHaveAttribute('inert')
+    first.unmount()
+    render(ui)
+    expect(document.querySelector('aside.evidence')).toHaveAttribute('inert')
+  })
+
   it('the message "Show evidence" action opens the drawer', async () => {
     const user = await mountAsked()
     const msg = screen.getByRole('article', { name: 'Answer' })

@@ -49,7 +49,11 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
   // Escape closes the menu / confirm; a click elsewhere does too.
   useEffect(() => {
     if (mode !== 'menu' && mode !== 'confirm') return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      close()
+    }
     const onDown = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setMode('idle')
     }
@@ -88,6 +92,7 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
               commit()
             }
             else if (e.key === 'Escape') {
+              e.preventDefault()
               e.stopPropagation()
               close()
             }

@@ -9,6 +9,7 @@ import { MessageView } from './MessageView'
 import { usePopover } from './usePopover'
 import { EvidencePanel, type EvidenceTab } from '../evidence/EvidencePanel'
 import { EvidenceDrawerContext, useDrawerMode } from '../evidence/drawer'
+import { useDrawer } from '../shell/useDrawer'
 import './chat.css'
 
 const fileName = (title: string) => (title.replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'conversation') + '.json'
@@ -123,50 +124,26 @@ export function ChatView() {
   // Evidence column: tab choice, plus the drawer below 1100 px.
   const narrow = useDrawerMode()
   const [tab, setTab] = useState<EvidenceTab>('graph')
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const openerRef = useRef<HTMLButtonElement>(null)
-  const returnTo = useRef<HTMLElement | null>(null)
   const drawerRef = useRef<HTMLElement>(null)
-  const shown = narrow && drawerOpen
+  const { shown, show: openDrawer, hide: closeDrawer, openerRef } = useDrawer({
+    enabled: narrow,
+    focusSelector: '.evidence__close',
+    background: () => [...document.querySelectorAll('.chat, .shell__bar, .sb')],
+  })
 
   const selected = messages.find((m) => m.id === selectedMessageId)
   const response = selected && !selected.pending ? (selected.response ?? null) : null
   const sectionId = highlight && highlight.messageId === selectedMessageId ? highlight.sectionId : undefined
 
-  // A citation click reveals the cited passage.
+  // A citation click (a highlight that changed after mount) reveals the cited passage.
+  const lastHighlight = useRef(highlight)
   useEffect(() => {
-    if (sectionId) {
-      setTab('sources')
-      if (narrow) openDrawer()
-    }
-  }, [highlight])
-
-  function openDrawer() {
-    if (!drawerOpen) returnTo.current = (document.activeElement as HTMLElement | null) ?? null
-    setDrawerOpen(true)
-  }
-  const closeDrawer = () => setDrawerOpen(false)
-
-  const wasShown = useRef(false)
-  useEffect(() => {
-    if (shown) drawerRef.current?.querySelector<HTMLElement>('.evidence__close')?.focus()
-    else if (wasShown.current) {
-      const back = returnTo.current?.isConnected ? returnTo.current : openerRef.current
-      back?.focus()
-    }
-    wasShown.current = shown
-  }, [shown])
-
-  useEffect(() => {
-    if (!shown) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeDrawer()
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [shown])
-
-  useEffect(() => {
-    if (!narrow) setDrawerOpen(false)
-  }, [narrow])
+    if (highlight === lastHighlight.current) return
+    lastHighlight.current = highlight
+    if (!sectionId) return
+    setTab('sources')
+    if (narrow) openDrawer()
+  }, [highlight, sectionId, narrow, openDrawer])
 
   // Follow the stream while the reader is at the bottom; a new turn always scrolls into view.
   useLayoutEffect(() => {

@@ -46,6 +46,16 @@ describe('Shell drawer', () => {
     expect(document.querySelector('aside.sb')).toHaveAttribute('inert')
   })
 
+  it('makes the page behind the open drawer inert', async () => {
+    mount(true)
+    const main = document.querySelector('.shell__main')!
+    expect(main).not.toHaveAttribute('inert')
+    await userEvent.click(screen.getByRole('button', { name: 'Open conversations' }))
+    expect(main).toHaveAttribute('inert')
+    await userEvent.keyboard('{Escape}')
+    expect(main).not.toHaveAttribute('inert')
+  })
+
   it('scrim click closes and returns focus', async () => {
     mount(true)
     const opener = screen.getByRole('button', { name: 'Open conversations' })

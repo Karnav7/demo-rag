@@ -29,7 +29,10 @@ export function usePopover(itemSelector: string) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close()
+      if (e.key === 'Escape') {
+        e.preventDefault() // tells an enclosing drawer this key is spent
+        close()
+      }
     }
     const onDown = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) close(false)
