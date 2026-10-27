@@ -185,4 +185,22 @@ describe('store', () => {
     expect(seen).toEqual([0, 2])
     expect(msgs(s2, s2.getState().activeId!)[3].text).toBe('Something went wrong: boom')
   })
+  it('highlight is set, not persisted, and resets on conversation switch and clear', async () => {
+    const s = createStore()
+    const p = s.getState().send(Q)
+    await vi.runAllTimersAsync()
+    await p
+    const first = s.getState().activeId!
+    const asst = msgs(s, first)[1]
+    expect(s.getState().highlight).toBeNull()
+    s.getState().setHighlight({ messageId: asst.id, sectionId: 'sec-x' })
+    expect(s.getState().highlight).toEqual({ messageId: asst.id, sectionId: 'sec-x' })
+    expect(localStorage.getItem(CONVERSATIONS_KEY)).not.toContain('sec-x')
+    s.getState().newConversation()
+    expect(s.getState().highlight).toBeNull()
+    s.getState().select(first)
+    s.getState().setHighlight({ messageId: asst.id, sectionId: 'sec-x' })
+    s.getState().clear(first)
+    expect(s.getState().highlight).toBeNull()
+  })
 })

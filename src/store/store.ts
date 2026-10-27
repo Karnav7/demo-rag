@@ -14,6 +14,8 @@ export interface Message {
   vote?: 'up' | 'down' | null
 }
 export interface Conversation { id: string; title: string; createdAt: number; updatedAt: number; messages: Message[] }
+/** A cited section to emphasise in the evidence column (set by citation and graph-node clicks). */
+export interface Highlight { messageId: string; sectionId: string }
 export type GroupLabel = 'Today' | 'Yesterday' | 'Previous 7 days' | 'Older'
 
 export const CONVERSATIONS_KEY = 'dummy-rag.conversations'
@@ -48,6 +50,8 @@ export interface StoreState {
   settings: Settings
   /** Effective selection: the explicit pick if still valid, else the latest assistant message of the active conversation. */
   selectedMessageId: string | null
+  /** Transient; never persisted, reset when the active conversation changes or is cleared. */
+  highlight: Highlight | null
   newConversation(): string
   select(id: string): void
   rename(id: string, title: string): void
@@ -57,6 +61,7 @@ export interface StoreState {
   regenerate(messageId: string): Promise<void>
   vote(messageId: string, v: 'up' | 'down' | null): void
   selectMessage(id: string | null): void
+  setHighlight(h: Highlight | null): void
   patchSettings(p: Partial<Settings>): void
   exportConversation(id: string): string
   search(q: string): Conversation[]
@@ -87,6 +92,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
   let activeId: string | null = null
   let settings = storage.get<Settings>(SETTINGS_KEY, DEFAULT_SETTINGS, isSettings)
   let explicitSelected: string | null = null
+  let highlight: Highlight | null = null
   let inflight: { ctrl: AbortController; convId: string; msgId: string } | null = null
   let state: StoreState
 
@@ -97,7 +103,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
       if (explicitSelected && active.messages.some((m) => m.id === explicitSelected && m.role === 'assistant')) sel = explicitSelected
       else sel = [...active.messages].reverse().find((m) => m.role === 'assistant')?.id ?? null
     }
-    return { ...actions, conversations, activeId, settings, selectedMessageId: sel }
+    return { ...actions, conversations, activeId, settings, selectedMessageId: sel, highlight }
   }
   function emit(persist: 'all' | 'none' = 'all') {
     if (persist === 'all') {
@@ -176,6 +182,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
       conversations = [c, ...conversations]
       activeId = c.id
       explicitSelected = null
+      highlight = null
       emit()
       return c.id
     },
@@ -184,6 +191,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
       abort()
       activeId = id
       explicitSelected = null
+      highlight = null
       emit()
     },
     rename(id: string, title: string) {
@@ -195,13 +203,13 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     remove(id: string) {
       abort(id)
       conversations = conversations.filter((c) => c.id !== id)
-      if (activeId === id) { activeId = conversations[0]?.id ?? null; explicitSelected = null }
+      if (activeId === id) { activeId = conversations[0]?.id ?? null; explicitSelected = null; highlight = null }
       emit()
     },
     clear(id: string) {
       abort(id)
       updateConv(id, (c) => ({ ...c, messages: [], updatedAt: now() }))
-      if (activeId === id) explicitSelected = null
+      if (activeId === id) { explicitSelected = null; highlight = null }
       emit()
     },
     async send(text: string) {
@@ -237,6 +245,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
         id: m.id, role: 'assistant', createdAt: m.createdAt, text: '', pending: true, stages: [], vote: null,
       }))
       updateConv(conv.id, (c) => ({ ...c, updatedAt: now() }))
+      if (highlight?.messageId === messageId) highlight = null // its citations are about to change
       emit()
       await startAnswer(conv.id, prev.text, history, messageId)
     },
@@ -248,6 +257,10 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     },
     selectMessage(id: string | null) {
       explicitSelected = id
+      emit('none')
+    },
+    setHighlight(h: Highlight | null) {
+      highlight = h
       emit('none')
     },
     patchSettings(p: Partial<Settings>) {
