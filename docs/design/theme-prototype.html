@@ -1,0 +1,70 @@
+<h2>Paper by day, Glass by night</h2>
+<p class="subtitle">Click the sun/moon to see the switch. Hover a conversation, send the question, or click a tab to feel the motion I'm proposing.</p>
+
+<style>
+  .app { --bg:#f7f5f0; --side:#efece5; --panel:#fff; --line:#e3ded3; --ink:#2b2925; --mute:#8a8478; --acc:#b5522d; --accSoft:rgba(181,82,45,.12); --glow:none; --head:Georgia,serif; --headW:400;
+    height: 360px; display:flex; border-radius:12px; overflow:hidden; font:12px/1.45 Inter,system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); transition: background .5s ease, color .5s ease; position:relative; }
+  .app.dark { --bg:#0b0d17; --side:rgba(255,255,255,.03); --panel:rgba(255,255,255,.05); --line:rgba(255,255,255,.08); --ink:#e6e8f2; --mute:#8b90a8; --acc:#9aa6ff; --accSoft:rgba(124,140,255,.16); --glow:0 0 28px rgba(124,140,255,.18); --head:Inter,system-ui,sans-serif; --headW:600;
+    background: radial-gradient(120% 90% at 70% 0%, #1b2140 0%, #0b0d17 60%); }
+  .app * { transition: background-color .5s ease, border-color .5s ease, color .5s ease, box-shadow .5s ease; }
+  .sb { width:21%; background:var(--side); border-right:1px solid var(--line); padding:14px 10px; display:flex; flex-direction:column; gap:4px; }
+  .sb .it { padding:6px 8px; border-radius:7px; cursor:pointer; transition: background-color .2s ease, transform .2s ease; }
+  .sb .it:hover { background:var(--accSoft); transform:translateX(2px); }
+  .sb .it.on { background:var(--panel); box-shadow:0 0 0 1px var(--line); }
+  .sb .grp { font-size:10px; color:var(--mute); margin-top:8px; text-transform:uppercase; letter-spacing:.06em; }
+  .sb .foot { margin-top:auto; display:flex; justify-content:space-between; align-items:center; color:var(--mute); }
+  .tog { cursor:pointer; width:28px; height:28px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--line); background:var(--panel); font-size:14px; }
+  .tog span { display:inline-block; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+  .app.dark .tog span { transform: rotate(-180deg); }
+  .chat { flex:1; padding:18px 20px; display:flex; flex-direction:column; gap:12px; overflow:hidden; }
+  .q { align-self:flex-end; background:var(--panel); border:1px solid var(--line); padding:8px 12px; border-radius:12px; max-width:75%; }
+  .a h4 { font-family:var(--head); font-weight:var(--headW); font-size:16px; margin:0 0 4px; }
+  .a, .chips, .q { animation: rise .55s cubic-bezier(.2,.8,.2,1) both; }
+  .chips { animation-delay:.25s; display:flex; gap:6px; }
+  .chip { border:1px solid var(--line); padding:3px 10px; border-radius:99px; cursor:pointer; transition: background-color .2s, border-color .2s; }
+  .chip:hover { background:var(--accSoft); border-color:var(--acc); }
+  .acc { color:var(--acc); }
+  .comp { margin-top:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px; display:flex; justify-content:space-between; box-shadow:var(--glow); }
+  .send { cursor:pointer; color:var(--acc); }
+  .ev { width:34%; background:var(--side); border-left:1px solid var(--line); padding:14px; display:flex; flex-direction:column; gap:10px; }
+  .tabs { display:flex; gap:12px; position:relative; font-size:11px; }
+  .tabs span { cursor:pointer; color:var(--mute); padding-bottom:4px; }
+  .tabs span.on { color:var(--ink); }
+  .ink { position:absolute; bottom:0; height:1.5px; background:var(--acc); transition: left .35s cubic-bezier(.2,.8,.2,1), width .35s cubic-bezier(.2,.8,.2,1); }
+  .pane { flex:1; animation: fade .4s ease both; }
+  svg line { stroke:var(--line); stroke-width:.8; stroke-dasharray:60; animation: draw 1s ease both; }
+  svg .hub { fill:var(--acc); } svg .n { fill:var(--ink); opacity:.85; animation: pop .5s cubic-bezier(.2,.8,.2,1) both; transform-box: fill-box; transform-origin:center; }
+  .app.dark svg .n { animation: pop .5s cubic-bezier(.2,.8,.2,1) both, drift 6s ease-in-out 1s infinite alternate; }
+  @keyframes rise { from { opacity:0; transform:translateY(8px); } }
+  @keyframes fade { from { opacity:0; } }
+  @keyframes draw { from { stroke-dashoffset:60; } }
+  @keyframes pop { from { opacity:0; transform:scale(.3); } }
+  @keyframes drift { to { transform: translate(1.5px,-1.5px); } }
+  .facts div { padding:6px 0; border-bottom:1px solid var(--line); }
+</style>
+
+<div class="app" id="app">
+  <div class="sb"><b style="font-family:var(--head);font-weight:var(--headW);font-size:15px">Lattice</b>
+    <div class="grp">Today</div><div class="it on">Carryover in Canada</div><div class="it">FMLA approval</div>
+    <div class="grp">Previous 7 days</div><div class="it">Mexico vacation</div><div class="it">Jury duty leave</div>
+    <div class="foot"><span>Guide</span><div class="tog" onclick="document.getElementById('app').classList.toggle('dark')"><span>☀︎</span></div></div></div>
+  <div class="chat" id="chat">
+    <div class="q">What is the carryover rule in Canada?</div>
+    <div class="a"><h4>Canada's clause overrides the global rule.</h4>Up to 5 unused days carry over into the next year <span class="acc">[1]</span>, replacing the global baseline rather than adding to it <span class="acc">[2]</span>.</div>
+    <div class="chips"><span class="chip">Who approves it?</span><span class="chip">Which law governs that?</span><span class="chip">Can I carry it over?</span></div>
+    <div class="comp"><span style="color:var(--mute)">Ask about leave…</span><span class="send" onclick="var c=document.getElementById('chat');[...c.querySelectorAll('.q,.a,.chips')].forEach(e=>{e.style.animation='none';e.offsetHeight;e.style.animation=''})">↵</span></div>
+  </div>
+  <div class="ev">
+    <div class="tabs" id="tabs"><span class="on">Subgraph</span><span>Facts</span><span>Sources</span><span>Cypher</span><div class="ink" id="ink"></div></div>
+    <div class="pane" id="pane"></div>
+  </div>
+</div>
+
+<script>
+  const graph = '<svg viewBox="0 0 100 90" width="100%"><line x1="50" y1="45" x2="18" y2="18"/><line x1="50" y1="45" x2="84" y2="20"/><line x1="50" y1="45" x2="26" y2="76"/><line x1="50" y1="45" x2="80" y2="72"/><line x1="18" y1="18" x2="84" y2="20"/><circle class="hub" cx="50" cy="45" r="6"/><circle class="n" cx="18" cy="18" r="3"/><circle class="n" cx="84" cy="20" r="3" style="animation-delay:.1s"/><circle class="n" cx="26" cy="76" r="3" style="animation-delay:.2s"/><circle class="n" cx="80" cy="72" r="3" style="animation-delay:.3s"/></svg>';
+  const panes = [graph, '<div class="facts"><div>Canada · carryover · 5 days</div><div>Overrides · Global carryover</div><div>Governed by · Canada Labour Code</div></div>', '<div class="facts"><div>§4.2 Canada policy — Carryover</div><div>§1.3 Global policy — Baseline</div></div>', '<pre style="margin:0;font-size:10px;white-space:pre-wrap;color:var(--mute)">MATCH (seed) WHERE seed.id IN [...]\nCALL apoc.path.subgraphAll(seed, …)</pre>'];
+  const tabs = [...document.querySelectorAll('#tabs span')], ink = document.getElementById('ink'), pane = document.getElementById('pane');
+  function sel(i){ tabs.forEach((t,j)=>t.classList.toggle('on',i===j)); ink.style.left=tabs[i].offsetLeft+'px'; ink.style.width=tabs[i].offsetWidth+'px'; pane.innerHTML=panes[i]; pane.style.animation='none'; pane.offsetHeight; pane.style.animation=''; }
+  tabs.forEach((t,i)=>t.onclick=()=>sel(i)); requestAnimationFrame(()=>sel(0));
+</script>
