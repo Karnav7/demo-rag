@@ -218,14 +218,19 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
   const zoomT = useZoom(svgRef)
   const sim = useRef<{ st: Stepper; byId: Map<string, SimNode>; target: number; raf: number } | null>(null)
   const drag = useRef<{ id: string; x: number; y: number; moved: boolean } | null>(null)
-  const moved = useRef(false)
+  /** True only between the pointerup that ends a drag and the click event the browser fires right after it. */
+  const suppressClick = useRef(false)
+  const suppressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // Reset to the settled layout whenever the subgraph changes; stop any live simulation on change/unmount.
   useEffect(() => {
     setPos(base)
     return () => {
-      if (sim.current) cancelAnimationFrame(sim.current.raf)
+      if (sim.current?.raf) cancelAnimationFrame(sim.current.raf)
       sim.current = null
+      drag.current = null
+      suppressClick.current = false
+      clearTimeout(suppressTimer.current)
     }
   }, [base])
 
@@ -260,14 +265,26 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
   const toLocal = (e: React.PointerEvent) => {
     const m = layerRef.current?.getScreenCTM?.()
     if (!m) return null
-    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(m.inverse())
-    return { x: p.x, y: p.y }
+    const { a, b, c, d, e: tx, f: ty } = m.inverse()
+    return { x: a * e.clientX + c * e.clientY + tx, y: b * e.clientX + d * e.clientY + ty }
+  }
+
+  function endDrag() {
+    const dragged = drag.current?.moved
+    drag.current = null
+    if (sim.current) sim.current.target = 0 // the node stays where it was dropped (fx/fy kept)
+    if (!dragged) return
+    // Swallow the click that follows this pointerup, and only that one.
+    suppressClick.current = true
+    clearTimeout(suppressTimer.current)
+    suppressTimer.current = setTimeout(() => {
+      suppressClick.current = false
+    }, 0)
   }
 
   const handlers = (id: string): React.SVGProps<SVGGElement> => ({
     onPointerDown: (e) => {
       if (e.button !== 0) return
-      moved.current = false
       drag.current = { id, x: e.clientX, y: e.clientY, moved: false }
       ;(e.currentTarget as Element).setPointerCapture?.(e.pointerId)
     },
@@ -275,7 +292,7 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
       const d = drag.current
       if (!d || d.id !== id) return
       if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 3) return
-      d.moved = moved.current = true
+      d.moved = true
       const p = toLocal(e)
       if (!p) return
       const live = liveSim(pos)
@@ -287,17 +304,12 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
       live.st.reheat(0.3)
       if (!live.raf) run(live)
     },
-    onPointerUp: () => {
-      drag.current = null
-      if (sim.current) sim.current.target = 0 // the node stays where it was dropped (fx/fy kept)
-    },
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
   })
 
   const open = (id: string) => {
-    if (moved.current) {
-      moved.current = false
-      return
-    }
+    if (suppressClick.current) return
     onNodeOpen(id)
   }
 

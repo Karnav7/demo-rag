@@ -17,8 +17,11 @@ export const labelName = (l: NodeLabel) => DISPLAY[l] ?? l
 const FALLBACK: Record<NodeLabel, string> = {
   Person: '#5f7a99', Company: '#8a7550', Account: '#5e8a6e', Transaction: '#8f7aa8',
   Address: '#9a8f7d', Device: '#5f8b8f', SanctionsEntry: '#a8453b', Jurisdiction: '#7d6b5a',
-  Regulation: '#6b6f8a', Case: '#a8687a', Alert: '#c08a2e', Document: '#8a8478', Section: '#8a8478',
+  Regulation: '#6b6f8a', Case: '#a8687a', Alert: '#c08a2e', Document: '#7a7466', Section: '#9c9586',
 }
+
+/** Every NodeLabel (the Record type above forces completeness). */
+export const NODE_LABELS = Object.keys(FALLBACK) as NodeLabel[]
 
 /** The CSS reference for SVG fills: follows the theme cross-fade without a re-render. */
 export const cssColor = (label: NodeLabel) => `var(--node-${label}, ${FALLBACK[label]})`

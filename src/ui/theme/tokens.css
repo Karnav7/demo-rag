@@ -28,6 +28,8 @@
   --node-Regulation: #6b6f8a;
   --node-Case: #a8687a;
   --node-Alert: #c08a2e;
+  --node-Document: #7a7466;
+  --node-Section: #9c9586;
 }
 
 :root[data-theme='dark'] {
@@ -60,6 +62,8 @@
   --node-Regulation: #a0a8c0;
   --node-Case: #e3a0b0;
   --node-Alert: #f0b36e;
+  --node-Document: #b8bccb;
+  --node-Section: #8f94aa;
 }
 
 :root {
