@@ -203,7 +203,7 @@
   border: 1px solid var(--line);
   background: var(--panel);
   backdrop-filter: var(--panel-blur);
-  box-shadow: 0 8px 24px var(--shadow-pop);
+  box-shadow: var(--shadow-pop);
   display: flex;
   flex-direction: column;
   animation: sb-pop 0.2s var(--ease) both;

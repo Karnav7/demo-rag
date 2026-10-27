@@ -627,7 +627,7 @@
   background: var(--accent);
 }
 
-/* Evidence column slot (Task 10 fills it) */
+/* Evidence column (tabs and drawer: ../evidence/evidence.css) */
 .evidence {
   flex: none;
   width: clamp(300px, 34%, 440px);
@@ -648,12 +648,6 @@
   line-height: 1.5;
 }
 
-@media (max-width: 1099px) {
-  /* Becomes a toggleable drawer in Task 10. */
-  .evidence {
-    display: none;
-  }
-}
 @media (max-width: 759px) {
   .msgs,
   .empty,

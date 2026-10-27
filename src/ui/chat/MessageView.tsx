@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { Check, Copy, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { Check, Copy, PanelRight, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import type { Message } from '../../store/store'
 import { useAppStore } from '../../store/StoreProvider'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
+import { useEvidenceDrawer } from '../evidence/drawer'
 import { Markdown } from './Markdown'
 import { modeLabel, SOURCE_LABEL } from './labels'
 
@@ -62,6 +63,7 @@ function UserMessage({ m, fresh }: { m: Message; fresh: boolean }) {
 function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
   const { settings, selectedMessageId, selectMessage, setHighlight, regenerate, vote, send } = useAppStore()
   const reduced = useReducedMotion()
+  const drawer = useEvidenceDrawer()
   const [copied, setCopied] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(timer.current), [])
@@ -89,6 +91,7 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
   const onCite = (n: number) => {
     const c = r?.citations.find((x) => x.n === n)
     selectMessage(m.id)
+    drawer.show()
     if (c) setHighlight({ messageId: m.id, sectionId: c.section_id })
   }
 
@@ -150,6 +153,18 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
 
       {!m.pending && (
         <div className="msg__actions">
+          <button
+            type="button"
+            className="act"
+            aria-label="Show evidence"
+            title="Show evidence"
+            onClick={() => {
+              selectMessage(m.id)
+              drawer.show()
+            }}
+          >
+            <PanelRight size={14} aria-hidden />
+          </button>
           <button type="button" className="act" aria-label="Copy answer" title="Copy answer" onClick={copy}>
             {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
           </button>
