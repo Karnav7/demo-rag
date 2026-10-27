@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import * as pipeline from '../engine/pipeline'
 import { createClient, isLiveSimulated } from './chatClient'
 import type { ChatEvent, ChatRequest, Source } from '../domain/types'
 
@@ -68,6 +69,36 @@ describe('SnapshotChatClient', () => {
     await run
     expect(events).toHaveLength(2)
     expect(events.some((e) => e.type === 'error' || e.type === 'done')).toBe(false)
+  })
+})
+
+describe('SnapshotChatClient edge cases', () => {
+  it('emits a single error event when the pipeline throws', async () => {
+    vi.spyOn(pipeline, 'runPipeline').mockImplementation(() => { throw new Error('boom') })
+    const events = await collect('offline')
+    expect(events).toEqual([{ type: 'error', message: 'boom' }])
+    vi.restoreAllMocks()
+  })
+
+  it('abort before start yields no events', async () => {
+    const ac = new AbortController()
+    ac.abort()
+    expect(await collect('offline', ac.signal)).toEqual([])
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('abort during a token wait yields nothing further and leaves no timers', async () => {
+    const ac = new AbortController()
+    const events: ChatEvent[] = []
+    const run = (async () => {
+      for await (const e of createClient('offline').chat(req('offline'), ac.signal)) events.push(e)
+    })()
+    for (let i = 0; i < 200 && !events.some((e) => e.type === 'token'); i++) await vi.advanceTimersByTimeAsync(10)
+    const n = events.length
+    ac.abort()
+    await run
+    expect(events).toHaveLength(n)
+    expect(vi.getTimerCount()).toBe(0)
   })
 })
 

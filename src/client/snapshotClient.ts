@@ -51,7 +51,14 @@ export class SnapshotChatClient implements ChatClient {
   async *chat(req: ChatRequest, signal: AbortSignal): AsyncGenerator<ChatEvent> {
     const rand = seeded(req.question)
     const between = (min: number, max: number) => Math.round(min + rand() * (max - min))
-    const { stages: raw, response } = runPipeline(loadWorld(), req)
+    let result: ReturnType<typeof runPipeline>
+    try {
+      result = runPipeline(loadWorld(), req)
+    } catch (err) {
+      yield { type: 'error', message: err instanceof Error ? err.message : 'Pipeline failed' }
+      return
+    }
+    const { stages: raw, response } = result
 
     const stages = raw.map((s) => ({ ...s, ms: between(this.latency.minMs, this.latency.maxMs) }))
     for (const stage of stages) {
