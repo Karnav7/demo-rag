@@ -52,31 +52,70 @@ describe('store', () => {
     expect(createStore().getState().conversations[0].messages[1].pending).toBe(false)
   })
 
-  it('switching conversation mid-stream aborts and leaks nothing', async () => {
-    const s = createStore()
-    const A = s.getState().newConversation()
-    const pA = s.getState().send(Q)
-    // create B via a second store action while A streams
+  const hangingClient = (signals: AbortSignal[]) => ({
+    clientFor: () => ({
+      async *chat(_req: unknown, signal: AbortSignal) {
+        signals.push(signal)
+        yield { type: 'token' as const, text: 'partial ' }
+        await new Promise<void>((res) => signal.addEventListener('abort', () => res()))
+        yield { type: 'token' as const, text: 'LEAK' }
+      },
+    }),
+  })
+
+  it.each(['select', 'newConversation'] as const)('switching away via %s mid-stream aborts and leaks nothing', async (how) => {
+    const signals: AbortSignal[] = []
+    const s = createStore(hangingClient(signals))
     const B = s.getState().newConversation()
-    expect(B).not.toBe(A)
-    const before = JSON.stringify(msgs(s, B))
-    s.getState().select(A)
-    s.getState().select(B)
-    await vi.runAllTimersAsync()
+    const A = s.getState().newConversation()
+    // newConversation reuses the empty active B; make B non-empty for a distinct target
+    expect(A).toBe(B)
+    const bId = B
+    s.getState().select(bId)
+    const pB = s.getState().send('first in B')
+    await vi.advanceTimersByTimeAsync(0)
+    s.getState().newConversation() // abort B's stream, create A
+    await pB
+    const aId = s.getState().activeId!
+    expect(aId).not.toBe(bId)
+    const pA = s.getState().send('question in A')
+    await vi.advanceTimersByTimeAsync(0)
+    if (how === 'select') s.getState().select(bId)
+    else s.getState().newConversation()
+    const other = s.getState().activeId!
+    const before = JSON.stringify(msgs(s, other))
     await pA
-    expect(JSON.stringify(msgs(s, B))).toBe(before)
-    const am = msgs(s, A)
-    expect(am[1].pending).toBe(false)
-    expect(am[1].response).toBeUndefined()
+    await vi.runAllTimersAsync()
+    expect(signals[signals.length - 1].aborted).toBe(true)
+    expect(JSON.stringify(msgs(s, other))).toBe(before)
+    const am = msgs(s, aId)[1]
+    expect(am.pending).toBe(false)
+    expect(am.text).toBe('partial ')
+  })
+
+  it('malformed persisted shapes drop only the bad conversations', () => {
+    const base = { createdAt: 1, updatedAt: 1 }
+    const m = (extra: object) => ({ id: 'm', role: 'assistant', text: 't', createdAt: 1, ...extra })
+    const okResp = { answer: 'a', citations: [], facts: [], sources: [], cypher: [], trace: [], subgraph: { nodes: [], edges: [] } }
+    localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify([
+      { id: 'good', title: 'g', ...base, messages: [m({ response: okResp, stages: [], vote: 'up' })] },
+      { id: 'r1', title: 'x', ...base, messages: [m({ response: 'x' })] },
+      { id: 'r2', title: 'x', ...base, messages: [m({ response: {} })] },
+      { id: 'r3', title: 'x', ...base, messages: [m({ response: { ...okResp, subgraph: {} } })] },
+      { id: 'r4', title: 'x', ...base, messages: [m({ stages: 'no' })] },
+      { id: 'r5', title: 'x', ...base, messages: [m({ vote: 'sideways' })] },
+    ]))
+    expect(createStore().getState().conversations.map((c) => c.id)).toEqual(['good'])
   })
 
   it('deleting the active streaming conversation aborts', async () => {
-    const s = createStore()
+    const signals: AbortSignal[] = []
+    const s = createStore(hangingClient(signals))
     const p = s.getState().send(Q)
-    const id = s.getState().activeId!
-    s.getState().remove(id)
-    await vi.runAllTimersAsync()
+    await vi.advanceTimersByTimeAsync(0)
+    s.getState().remove(s.getState().activeId!)
     await p
+    expect(signals[0].aborted).toBe(true)
     expect(s.getState().conversations).toEqual([])
     expect(s.getState().activeId).toBeNull()
   })

@@ -21,14 +21,22 @@ export const SETTINGS_KEY = 'dummy-rag.settings'
 export const DEFAULT_SETTINGS: Settings = { source: 'offline', mode: 'hybrid', useContext: true, generateAnswer: true }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
+const arr = (v: unknown) => Array.isArray(v)
+const isResponse = (v: unknown): boolean =>
+  isObj(v) && typeof v.answer === 'string' &&
+  ['citations', 'facts', 'sources', 'cypher', 'trace'].every((k) => arr(v[k])) &&
+  isObj(v.subgraph) && arr(v.subgraph.nodes) && arr(v.subgraph.edges)
 const isMessage = (v: unknown): v is Message =>
   isObj(v) && typeof v.id === 'string' && (v.role === 'user' || v.role === 'assistant') &&
-  typeof v.text === 'string' && typeof v.createdAt === 'number'
+  typeof v.text === 'string' && typeof v.createdAt === 'number' &&
+  (v.response === undefined || isResponse(v.response)) &&
+  (v.stages === undefined || arr(v.stages)) &&
+  (v.vote === undefined || v.vote === null || v.vote === 'up' || v.vote === 'down')
 const isConversation = (v: unknown): v is Conversation =>
   isObj(v) && typeof v.id === 'string' && typeof v.title === 'string' &&
   typeof v.createdAt === 'number' && typeof v.updatedAt === 'number' &&
   Array.isArray(v.messages) && v.messages.every(isMessage)
-const isConversations = (v: unknown): v is Conversation[] => Array.isArray(v) && v.every(isConversation)
+const isArray = (v: unknown): v is unknown[] => Array.isArray(v)
 const isSettings = (v: unknown): v is Settings =>
   isObj(v) && (v.source === 'live' || v.source === 'offline') &&
   ['lexical', 'vector', 'hybrid', 'graph'].includes(v.mode as string) &&
@@ -65,7 +73,8 @@ const uid = (p: string) => `${p}-${Date.now().toString(36)}-${(counter++).toStri
 const startOfDay = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime() }
 
 function loadConversations(): Conversation[] {
-  const list = storage.get<Conversation[]>(CONVERSATIONS_KEY, [], isConversations)
+  // Malformed conversations are dropped individually; the rest survive.
+  const list = storage.get<unknown[]>(CONVERSATIONS_KEY, [], isArray).filter(isConversation)
   return list.map((c) => ({ ...c, messages: c.messages.map((m) => (m.pending ? { ...m, pending: false } : m)) }))
 }
 
@@ -161,6 +170,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     newConversation() {
       const empty = conversations.find((c) => c.id === activeId && c.messages.length === 0)
       if (empty) return empty.id
+      abort()
       const t = now()
       const c: Conversation = { id: uid('c'), title: 'New conversation', createdAt: t, updatedAt: t, messages: [] }
       conversations = [c, ...conversations]
