@@ -25,11 +25,21 @@ function hash(s: string): number {
   return h >>> 0
 }
 
-function embed(tokens: string[]): Float64Array {
+const SYNONYM_WEIGHT = 0.3
+const LABEL_WEIGHT = 0.3
+const NUMERIC_BOOST = 2
+
+/** Weighted token bag -> normalised trigram vector. Long digit-bearing tokens (years, amounts, ids) are boosted; short ones (day numbers) are not. */
+function embed(tokens: Map<string, number>): Float64Array {
   const v = new Float64Array(DIM)
-  for (const tok of tokens) {
+  for (const [tok, weight] of tokens) {
+    const w = /\d/.test(tok) && tok.length >= 4 ? weight * NUMERIC_BOOST : weight
     const padded = `^${tok}$`
-    for (let i = 0; i + 3 <= padded.length; i++) v[hash(padded.slice(i, i + 3)) % DIM] += 1
+    for (let i = 0; i + 3 <= padded.length; i++) {
+      const h = hash(padded.slice(i, i + 3))
+      // Signed feature hashing: colliding trigrams cancel in expectation instead of inflating similarity.
+      v[h % DIM] += (h & 0x100) === 0 ? w : -w
+    }
   }
   let norm = 0
   for (const x of v) norm += x * x
@@ -44,12 +54,19 @@ const cache = new WeakMap<WorldIndex, { id: string; v: Float64Array }[]>()
 export function vectorSearch(w: WorldIndex, q: string, k = 12): Hit[] {
   let docs = cache.get(w)
   if (!docs) {
-    docs = w.nodes.filter(isEntity).map((n) => ({ id: n.id, v: embed([...tokenize(entityText(n)), n.label.toLowerCase()]) }))
+    docs = w.nodes.filter(isEntity).map((n) => {
+      const bag = new Map<string, number>()
+      for (const t of tokenize(entityText(n))) bag.set(t, 1)
+      const label = n.label.toLowerCase()
+      if (!bag.has(label)) bag.set(label, LABEL_WEIGHT)
+      return { id: n.id, v: embed(bag) }
+    })
     cache.set(w, docs)
   }
-  const toks = tokenize(q)
-  const expanded = toks.flatMap((t) => SYN.get(t) ?? [t])
-  const qv = embed([...new Set(expanded)])
+  const bag = new Map<string, number>()
+  for (const t of tokenize(q)) bag.set(t, 1)
+  for (const t of [...bag.keys()]) for (const s of SYN.get(t) ?? []) if (!bag.has(s)) bag.set(s, SYNONYM_WEIGHT)
+  const qv = embed(bag)
   const hits: Hit[] = []
   for (const d of docs) {
     let dot = 0

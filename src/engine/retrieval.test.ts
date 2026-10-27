@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { loadWorld } from '../data/load'
-import { MERIDIAN } from '../data/scenarios'
+import { ALERTED_TXN, FRONT_DIRECTOR, FRONT_DIRECTOR_NAME, MERIDIAN } from '../data/scenarios'
 import { lexicalSearch } from './lexical'
 import { vectorSearch } from './vector'
 import { rrf } from './fuse'
@@ -46,5 +46,23 @@ describe('retrieval', () => {
     const q = 'who owns meridian trade'
     expect(lexicalSearch(w, q)).toEqual(lexicalSearch(w, q))
     expect(vectorSearch(w, q)).toEqual(vectorSearch(w, q))
+  })
+})
+
+describe('fused free-text questions', () => {
+  const fused = (q: string) => rrf([lexicalSearch(w, q), vectorSearch(w, q)]).map((h) => h.id)
+
+  it('ALERTED_TXN is the 14 March wire', () => {
+    expect(w.byId.get(ALERTED_TXN)!.name).toMatch(/Wire 14 March/)
+  })
+  it('ranks Meridian first for ownership question', () => {
+    expect(fused('Who ultimately owns Meridian Trade LLC?')[0]).toBe(MERIDIAN)
+  })
+  it('ranks the 14 March wire first for the alert question', () => {
+    expect(fused('Why was the 14 March wire flagged?')[0]).toBe(ALERTED_TXN)
+  })
+  it('ranks the front director in the top 3 for a surname + sanctions question', () => {
+    const surname = FRONT_DIRECTOR_NAME.split(' ').pop()!
+    expect(fused(`Is ${surname} linked to sanctions?`).slice(0, 3)).toContain(FRONT_DIRECTOR)
   })
 })
