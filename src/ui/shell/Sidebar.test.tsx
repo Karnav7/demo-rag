@@ -56,11 +56,12 @@ describe('Sidebar', () => {
   })
 
   it('rename Escape cancels', async () => {
-    setup(three)
+    const store = setup(three)
     await userEvent.click(screen.getByRole('button', { name: /options for Mule account ring/i }))
     await userEvent.click(screen.getByRole('menuitem', { name: 'Rename' }))
     await userEvent.type(screen.getByRole('textbox', { name: /rename conversation/i }), 'zzz{Escape}')
     expect(screen.getByText('Mule account ring')).toBeInTheDocument()
+    expect(store.getState().conversations.find((c) => c.id === 'b')?.title).toBe('Mule account ring')
   })
 
   it('delete requires confirm', async () => {
@@ -79,6 +80,31 @@ describe('Sidebar', () => {
     expect(screen.getByRole('menu')).toBeInTheDocument()
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('menu open focuses first item, arrows move, focus returns after rename', async () => {
+    setup(three)
+    const more = screen.getByRole('button', { name: /options for Mule account ring/i })
+    await userEvent.click(more)
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toHaveFocus()
+    await userEvent.keyboard('{ArrowUp}')
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toHaveFocus()
+    await userEvent.keyboard('{Enter}')
+    await userEvent.keyboard('x{Enter}')
+    expect(screen.getByRole('button', { name: /options for x$/i })).toHaveFocus()
+  })
+
+  it('Escape in confirm mode closes it and refocuses the menu button', async () => {
+    const store = setup(three)
+    await userEvent.click(screen.getByRole('button', { name: /options for Mule account ring/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete' }))
+    expect(screen.getByRole('button', { name: 'Delete? Yes' })).toHaveFocus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('button', { name: 'Delete? Yes' })).not.toBeInTheDocument()
+    expect(store.getState().conversations).toHaveLength(3)
+    expect(screen.getByRole('button', { name: /options for Mule account ring/i })).toHaveFocus()
   })
 
   it('groups render headings in order Today, Yesterday, Previous 7 days, Older', () => {

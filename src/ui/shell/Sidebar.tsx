@@ -1,14 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { BookOpen, Network, Plus, Search } from 'lucide-react'
 import { useAppStore } from '../../store/StoreProvider'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { ConversationItem } from './ConversationItem'
 
-export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+export function Sidebar({ onNavigate, narrow = false, open = false }: { onNavigate?: () => void; narrow?: boolean; open?: boolean }) {
   const s = useAppStore()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
 
   const groups = useMemo(() => {
     const all = s.grouped()
@@ -25,7 +26,13 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <aside className="sb" aria-label="Sidebar">
+    <aside
+      className="sb"
+      aria-label={narrow ? 'Conversations menu' : 'Sidebar'}
+      role={narrow ? 'dialog' : undefined}
+      aria-modal={narrow && open ? true : undefined}
+      inert={narrow && !open}
+    >
       <Link to="/" className="sb__brand" onClick={onNavigate}>
         <span className="sb__dot" aria-hidden />
         dummy-rag
@@ -45,6 +52,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
       <label className="sb__search">
         <Search size={14} aria-hidden />
         <input
+          ref={searchRef}
           type="search"
           aria-label="Search conversations"
           placeholder="Search conversations"
@@ -69,7 +77,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                     go('/')
                   }}
                   onRename={s.rename}
-                  onDelete={s.remove}
+                  onDelete={(id) => {
+                    s.remove(id)
+                    searchRef.current?.focus()
+                  }}
                 />
               ))}
             </ul>

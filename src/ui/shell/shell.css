@@ -203,7 +203,7 @@
   border: 1px solid var(--line);
   background: var(--panel);
   backdrop-filter: var(--panel-blur);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px var(--shadow-pop);
   display: flex;
   flex-direction: column;
   animation: sb-pop 0.2s var(--ease) both;
@@ -221,10 +221,7 @@
   background: var(--accent-soft);
 }
 .conv__danger {
-  color: #c0392b;
-}
-:root[data-theme='dark'] .conv__danger {
-  color: #ff8a8a;
+  color: var(--danger);
 }
 .conv__confirm {
   display: flex;
@@ -241,11 +238,8 @@
   cursor: pointer;
 }
 .conv__yes {
-  color: #c0392b;
+  color: var(--danger);
   font-weight: 600;
-}
-:root[data-theme='dark'] .conv__yes {
-  color: #ff8a8a;
 }
 .conv__no {
   color: var(--mute);
@@ -313,10 +307,7 @@
     z-index: 20;
     width: min(300px, 85vw);
     transform: translateX(-100%);
-    background: var(--bg);
-  }
-  :root[data-theme='dark'] .sb {
-    background: #10142a;
+    background: var(--drawer-bg);
   }
   .shell--open .sb {
     transform: none;
@@ -326,7 +317,7 @@
     position: fixed;
     inset: 0;
     z-index: 10;
-    background: rgba(0, 0, 0, 0.35);
+    background: var(--scrim);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.35s var(--ease);
@@ -354,6 +345,13 @@
     background: var(--panel);
     color: var(--ink);
     cursor: pointer;
+  }
+}
+
+/* Touch devices and the drawer layout have no hover: keep the menu button visible. */
+@media (hover: none), (max-width: 759px) {
+  .conv__more {
+    opacity: 1;
   }
 }
 

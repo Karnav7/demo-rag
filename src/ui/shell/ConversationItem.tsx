@@ -17,11 +17,39 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
   const [draft, setDraft] = useState(c.title)
   const rootRef = useRef<HTMLLIElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const moreRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const yesRef = useRef<HTMLButtonElement>(null)
+  const restoreFocus = useRef(false)
+
+  const close = () => {
+    restoreFocus.current = true
+    setMode('idle')
+  }
+
+  // Keep keyboard focus on a sensible control as the item changes mode.
+  useEffect(() => {
+    if (mode === 'menu') menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
+    else if (mode === 'confirm') yesRef.current?.focus()
+    else if (mode === 'idle' && restoreFocus.current) {
+      restoreFocus.current = false
+      moreRef.current?.focus()
+    }
+  }, [mode])
+
+  const onMenuKey = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+    e.preventDefault()
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])
+    const i = items.indexOf(document.activeElement as HTMLElement)
+    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length
+    items[next]?.focus()
+  }
 
   // Escape closes the menu / confirm; a click elsewhere does too.
   useEffect(() => {
     if (mode !== 'menu' && mode !== 'confirm') return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setMode('idle')
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
     const onDown = (e: MouseEvent) => {
       if (!rootRef.current?.contains(e.target as Node)) setMode('idle')
     }
@@ -40,7 +68,7 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
   const commit = () => {
     const t = draft.trim()
     if (t && t !== c.title) onRename(c.id, t)
-    setMode('idle')
+    close()
   }
 
   return (
@@ -58,7 +86,7 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
             if (e.key === 'Enter') commit()
             else if (e.key === 'Escape') {
               e.stopPropagation()
-              setMode('idle')
+              close()
             }
           }}
         />
@@ -69,27 +97,28 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
           </button>
           {mode === 'confirm' ? (
             <span className="conv__confirm">
-              <button type="button" className="conv__yes" onClick={() => onDelete(c.id)}>
+              <button ref={yesRef} type="button" className="conv__yes" onClick={() => onDelete(c.id)}>
                 Delete? Yes
               </button>
-              <button type="button" className="conv__no" onClick={() => setMode('idle')}>
+              <button type="button" className="conv__no" onClick={close}>
                 No
               </button>
             </span>
           ) : (
             <button
+              ref={moreRef}
               type="button"
               className="conv__more"
               aria-label={`Options for ${c.title}`}
               aria-haspopup="menu"
               aria-expanded={mode === 'menu'}
-              onClick={() => setMode(mode === 'menu' ? 'idle' : 'menu')}
+              onClick={() => (mode === 'menu' ? close() : setMode('menu'))}
             >
               <MoreHorizontal size={15} aria-hidden />
             </button>
           )}
           {mode === 'menu' && (
-            <div className="conv__menu" role="menu">
+            <div ref={menuRef} className="conv__menu" role="menu" onKeyDown={onMenuKey}>
               <button
                 type="button"
                 role="menuitem"
