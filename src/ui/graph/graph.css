@@ -366,3 +366,85 @@
     transform: translate(1.5px, -1.5px);
   }
 }
+
+/* Depth views (Orbit canvas, three.js 3D): the drawing surface, a hover tag, and the node keys. */
+.g-depth {
+  position: relative;
+}
+.g-depth__surface {
+  display: block;
+  width: 100%;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.g-depth__surface:active {
+  cursor: grabbing;
+}
+.g-depth__tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: -34px 0 0 0;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% 0;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease);
+  backdrop-filter: blur(8px);
+}
+.g-depth__tip[data-on='true'] {
+  opacity: 1;
+}
+
+/* Visually hidden until a key is focused; then a quiet strip over the foot of the stage. */
+.g-keys {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.g-keys:not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.g-keys:focus-within {
+  position: absolute;
+  inset: auto 8px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 40%;
+  overflow-y: auto;
+}
+.g-key {
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--mute);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.g-key:focus-visible {
+  color: var(--ink);
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .g-depth__tip {
+    transition: none;
+  }
+}

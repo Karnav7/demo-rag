@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState, type ComponentType } from 'react'
+import { Component, lazy, Suspense, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { Subgraph, TraceStage } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
@@ -6,7 +6,7 @@ import { Force } from './Force'
 import { Legend } from './Legend'
 import { Radial } from './Radial'
 import { Replay } from './Replay'
-import { LABEL_ORDER, type GraphViewProps } from './graphStyle'
+import { LABEL_ORDER, WEBGL_FALLBACK, type GraphViewProps } from './graphStyle'
 import './graph.css'
 
 export type GraphVariant = 'force' | 'radial' | 'orbit' | 'three' | 'replay'
@@ -32,20 +32,28 @@ function readVariant(): GraphVariant {
   return 'force'
 }
 
-/** Until Task 12 lands its lazy canvas / WebGL views, these slots render a neutral note. */
-function Pending() {
-  return <p className="ev-empty">This view is not available yet.</p>
-}
+/** The depth views load on demand: Orbit is a plain canvas, 3D carries three.js in its own chunk. */
+const Orbit = lazy(() => import('./Orbit'))
+const Three = lazy(() => import('./Three'))
 
-/**
- * Views that take only `GraphViewProps`. Task 12 swaps `Pending` for `lazy(() => import('./Orbit'))`
- * and `lazy(() => import('./Three'))`; the Suspense boundary below already wraps them.
- */
 const VIEWS: Record<Exclude<GraphVariant, 'replay'>, ComponentType<GraphViewProps>> = {
   force: Force,
   radial: Radial,
-  orbit: Pending,
-  three: Pending,
+  orbit: Orbit,
+  three: Three,
+}
+
+/** What a view shows if it throws or its chunk fails to load; the switcher and other views keep working. */
+const BROKEN: Partial<Record<GraphVariant, string>> = { three: WEBGL_FALLBACK }
+
+class ViewBoundary extends Component<{ fallback: string; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    return this.state.failed ? <p className="ev-empty">{this.props.fallback}</p> : this.props.children
+  }
 }
 
 export interface GraphViewsProps {
@@ -111,13 +119,15 @@ export function GraphViews({ subgraph, trace, onNodeOpen }: GraphViewsProps) {
       <div className="g__stage">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={variant} className="g__canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fade}>
-            <Suspense fallback={<p className="ev-empty">Loading view…</p>}>
-              {View ? (
-                <View subgraph={subgraph} dim={dim} onNodeOpen={onNodeOpen} />
-              ) : (
-                <Replay subgraph={subgraph} trace={trace} dim={dim} onNodeOpen={onNodeOpen} />
-              )}
-            </Suspense>
+            <ViewBoundary fallback={BROKEN[variant] ?? "This view couldn't load. The other views still work."}>
+              <Suspense fallback={<p className="ev-empty">Loading view…</p>}>
+                {View ? (
+                  <View subgraph={subgraph} dim={dim} onNodeOpen={onNodeOpen} />
+                ) : (
+                  <Replay subgraph={subgraph} trace={trace} dim={dim} onNodeOpen={onNodeOpen} />
+                )}
+              </Suspense>
+            </ViewBoundary>
           </motion.div>
         </AnimatePresence>
       </div>

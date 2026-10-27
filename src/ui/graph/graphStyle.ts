@@ -88,3 +88,6 @@ export interface GraphViewProps {
   dim: boolean
   onNodeOpen(nodeId: string): void
 }
+
+/** Shown in place of the 3D view when WebGL is missing, the renderer cannot start, or its chunk fails to load. */
+export const WEBGL_FALLBACK = "3D view needs WebGL, which isn't available here."
