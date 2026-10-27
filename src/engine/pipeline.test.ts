@@ -183,6 +183,35 @@ describe('runPipeline', () => {
     expect(r.answer).not.toMatch(/FinCEN|Bank Secrecy/)
   })
 
+  it.each([
+    ['acc-isolde-dunleavy', 'Isolde Dunleavy'],
+    ['acc-mule-1', 'Jordan Pryce'],
+  ])('ownership of a person-held account %s names the holder', (id, holder) => {
+    const { response: r } = ask(`Who owns account ${name(id)}?`)
+    expect(r.answer).toContain(`is held by ${holder}`)
+    expect(r.answer).not.toMatch(/^The graph holds no/)
+    const holds = r.facts.find((f) => f.relation === 'HOLDS' && f.object === name(id))!
+    expect(holds.used).toBe(true)
+  })
+
+  it.each([
+    `Who owns account ${'Prairie First Bank 1283373148'}?`,
+    'Who owns account GB72 TGBK 4023 4484 4603 77?',
+    `Who ultimately owns account ${'GB29 TGBK 4030 1078 9245 71'}?`,
+    `Who ultimately owns ${S.MERIDIAN_NAME}?`,
+    'What does Viktor Halden own?',
+    `Is ${S.FRONT_COMPANY_NAME} connected to a sanctioned party?`,
+    'Is Volgamar Seafoods GmbH connected to a sanctioned party?',
+    'Why was the 14 March wire flagged?',
+    'Why was Driftwood Timber LLC flagged?',
+    'Who else uses the same device as Jordan Pryce?',
+    'Tell me about Driftwood Timber LLC',
+  ])('every used fact is cited: %s', (q) => {
+    const { response: r } = ask(q)
+    const cited = new Set(r.citations.map((c) => c.section_id))
+    for (const f of r.facts.filter((x) => x.used && x.section_id)) expect(cited, `${f.subject} ${f.relation} ${f.object}`).toContain(f.section_id)
+  })
+
   it('is deterministic', () => {
     const q = `Is ${name(FRONT_COMPANY)} connected to a sanctioned party?`
     expect(ask(q)).toEqual(ask(q))
@@ -240,7 +269,79 @@ describe('resolveContext', () => {
     expect(resolveContext('What about Volgamar Seafoods GmbH?', h).resolved).toBe('Is Volgamar Seafoods GmbH connected to a sanctioned party?')
   })
 
+  it('carries the previous question over when "and" names only an entity', () => {
+    expect(resolveContext('And Kestrel Bay Trading Ltd?', history).resolved).toBe('Who ultimately owns Kestrel Bay Trading Ltd?')
+    expect(resolveContext('What about the Kestrel Bay Trading Ltd?', history).resolved).toBe('Who ultimately owns Kestrel Bay Trading Ltd?')
+  })
+
+  it.each(['And is Kestrel Bay Trading Ltd connected to a sanctioned party?', 'And who are the directors of Kestrel Bay Trading Ltd?'])(
+    'leaves a self-contained "and" question alone: %s',
+    (q) => {
+      expect(resolveContext(q, history)).toEqual({ resolved: q, changed: false, detail: 'No pronouns or ellipsis to resolve.' })
+    },
+  )
+
   it('applies ellipsis to the most recent entity when no new one is named', () => {
     expect(resolveContext('And the directors?', history).resolved).toBe('And the directors of Meridian Trade LLC?')
+  })
+})
+
+describe('intent pattern Cypher', () => {
+  const expandQuery = (q: string) => ask(q).response.cypher.find((c) => c.stage === 'expand')!.query
+  /** (Label pairs) for each type, as stored in the dataset. */
+  const directions = new Set(w.rels.map((r) => `${w.byId.get(r.from)!.label}-${r.type}->${w.byId.get(r.to)!.label}`))
+  const NODE = String.raw`\((\w*)(?::(\w+))?[^)]*\)`
+
+  /** Every hop written with labels on both ends must exist in the data in that direction. */
+  function checkDirections(query: string) {
+    const labels = new Map<string, string>()
+    for (const m of query.matchAll(/\((\w+):(\w+)/g)) labels.set(m[1], m[2])
+    const hop = new RegExp(`${NODE}(<?)-\\[\\w*:([A-Z_|]+)[^\\]]*\\]-(>?)(?=${NODE})`, 'g')
+    let checked = 0
+    for (const m of query.matchAll(hop)) {
+      const rest = query.slice(m.index! + m[0].length)
+      const next = new RegExp(`^${NODE}`).exec(rest)!
+      const [left, right] = [m[2] ?? labels.get(m[1]), next[2] ?? labels.get(next[1])]
+      if (!left || !right || (!m[3] && !m[5])) continue
+      const [from, to] = m[5] ? [left, right] : [right, left]
+      for (const t of m[4].split('|')) {
+        const ok = directions.has(`${from}-${t}->${to}`)
+        if (ok) checked++
+        expect(ok || m[4].includes('|'), `${from}-${t}->${to}`).toBe(true)
+      }
+    }
+    return checked
+  }
+
+  it('shared: directors are (:Person)-[:DIRECTOR_OF]->(:Company) on both sides', () => {
+    const q = expandQuery(`Who else shares a director with ${S.FRONT_COMPANY_NAME}?`)
+    expect(q).toContain('(focal)<-[d1:DIRECTOR_OF]-(p:Person)-[d2:DIRECTOR_OF]->(other:Company)')
+    expect(checkDirections(q)).toBeGreaterThan(0)
+  })
+
+  it('trail: a Transaction focal is matched from its accounts', () => {
+    const q = expandQuery(`Show the money trail for ${name(ALERTED_TXN)}`)
+    expect(q).toContain('(acct:Account)-[r1:SENT|RECEIVED]->(focal:Transaction)')
+    expect(q).not.toContain('coalesce(held, focal)')
+    expect(checkDirections(q)).toBeGreaterThan(0)
+  })
+
+  it('flagged: an Alert focal flags its transactions', () => {
+    // The high-value alert: the other one's name ("Sanctions proximity") reads as a sanctions question.
+    const alert = (w.in.get(ALERTED_TXN) ?? []).find((r) => r.type === 'FLAGS' && w.byId.get(r.from)!.props.rule === 'HIGH_VALUE_WIRE')!.from
+    const q = expandQuery(`Why did ${name(alert)} flag?`)
+    expect(q).toContain('(focal:Alert)-[f:FLAGS]->(t:Transaction)')
+    expect(checkDirections(q)).toBeGreaterThan(0)
+  })
+
+  it.each([
+    `Who ultimately owns ${S.MERIDIAN_NAME}?`,
+    `Who else shares ${S.FRONT_COMPANY_NAME}'s address?`,
+    `Is ${S.FRONT_COMPANY_NAME} connected to a sanctioned party?`,
+    `Show the money trail for account ${name(COLLECTOR)}`,
+    'Why was the 14 March wire flagged?',
+    `Which regulation requires reporting suspicious activity for ${S.FRONT_COMPANY_NAME}?`,
+  ])('labelled hops follow the dataset directions: %s', (q) => {
+    checkDirections(expandQuery(q))
   })
 })

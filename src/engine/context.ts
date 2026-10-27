@@ -68,7 +68,10 @@ export function resolveContext(question: string, history: ChatRequest['history']
   if (!hasPronoun && !ellipsis) return { resolved: q, changed: false, detail: UNCHANGED }
 
   // "What about Volgamar Seafoods?": ask the previous question again about the newly named entity.
+  // Only when the fragment is just the entity; "And who are the directors of X?" already stands alone.
   if (ellipsis && own.length) {
+    const leftover = ellipsis[1].replace(new RegExp(escape(own[0].text), 'i'), ' ').replace(/\bthe\b|[?.!,;:\s]/gi, '')
+    if (leftover) return { resolved: q, changed: false, detail: UNCHANGED }
     const prevQ = [...history].reverse().find((h) => h.role === 'user')?.text.trim()
     if (!prevQ) return { resolved: q, changed: false, detail: UNCHANGED }
     const old = mentions(w, prevQ)[0]

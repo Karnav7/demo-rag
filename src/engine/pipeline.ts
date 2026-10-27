@@ -158,7 +158,7 @@ export function runPipeline(w: WorldIndex, req: ChatRequest): { stages: TraceSta
   // 9. Answer
   const relById = new Map(rels.map((r) => [r.id, r]))
   const topRels = (n: number) => ranking.slice(0, n).map((f) => relById.get(f.rel_id)!)
-  const c = new Citations()
+  let c = new Citations()
   let answer: string
   let detail: string
   if (!seeds.length) {
@@ -170,6 +170,7 @@ export function runPipeline(w: WorldIndex, req: ChatRequest): { stages: TraceSta
       answer = templated
       detail = `Templated ${intent} answer citing ${plural(c.used.size, 'fact')} from ${plural(c.list().length, 'passage')}.`
     } else {
+      c = new Citations() // whatever the empty template touched must not count as used
       const facts = topRels(FALLBACK_FACTS)
       answer = facts.length ? `${fallbackLead(intent, focal!)}\n\n${extractive(w, facts, c)}` : `${focal!.name} is in the graph, but no relationships are recorded for it.`
       detail = `No ${intent} pattern matched, so the answer lists the top ${plural(facts.length, 'fact')} instead.`

@@ -116,8 +116,16 @@ type Writer<I extends Intent> = (w: WorldIndex, m: Extract<Match, { intent: I }>
 
 const ownership: Writer<'ownership'> = (w, m, c) => {
   const { focal, subject } = m
+  // Decide before citing anything, so an empty answer leaves no facts marked used.
+  const records = m.owners.length + m.holdings.length + m.control.length + m.directors.length + m.directorships.length
+  if (!records && !m.holderRel) return null
   const lines: string[] = []
   const lead = focal.id !== subject.id ? `Account ${focal.name} is held by ${subject.name}${c.rel(m.holderRel)}. ` : ''
+  let leadUsed = false
+  const withLead = (s: string) => {
+    leadUsed = true
+    return `${lead}${s}`
+  }
 
   if (m.owners.length) {
     const [top, ...rest] = m.owners
@@ -129,8 +137,8 @@ const ownership: Writer<'ownership'> = (w, m, c) => {
     const direct = path.length === 1 ? c.rel(...path) : ''
     lines.push(
       top.owner.label === 'Person'
-        ? `${lead}${b(`${subject.name} is ultimately owned by ${top.owner.name}`)}, who holds an effective ${b(fmtPct(top.pct))} interest ${through}${direct}.`
-        : `${lead}${b(`${subject.name}'s ownership chain ends at ${top.owner.name}`)}, which holds an effective ${b(fmtPct(top.pct))} ${through}${direct} and has no recorded shareholders of its own.`,
+        ? withLead(`${b(`${subject.name} is ultimately owned by ${top.owner.name}`)}, who holds an effective ${b(fmtPct(top.pct))} interest ${through}${direct}.`)
+        : withLead(`${b(`${subject.name}'s ownership chain ends at ${top.owner.name}`)}, which holds an effective ${b(fmtPct(top.pct))} ${through}${direct} and has no recorded shareholders of its own.`),
     )
     if (path.length > 1) {
       lines.push('', 'Ownership chain:')
@@ -148,14 +156,15 @@ const ownership: Writer<'ownership'> = (w, m, c) => {
       lines.push('', `Other ultimate owners: ${joinList(others)}.`)
     }
   } else if (subject.label !== 'Person') {
-    lines.push(`${lead}${b(`No shareholders of ${subject.name} are recorded in the graph`)}.`)
+    lines.push(withLead(`${b(`No shareholders of ${subject.name} are recorded in the graph`)}.`))
   }
 
   if (m.holdings.length) {
     const direct = m.holdings.filter((h) => h.path.length === 1)
     const indirect = m.holdings.filter((h) => h.path.length > 1)
     const directly = direct.length === m.holdings.length ? ', all directly' : direct.length ? `, ${words[direct.length] ?? direct.length} of them directly` : ''
-    lines.push(`${b(`${subject.name} holds ownership interests in ${count(m.holdings.length, 'company', 'companies')}`)}${directly}.`, '')
+    const head = `${b(`${subject.name} holds ownership interests in ${count(m.holdings.length, 'company', 'companies')}`)}${directly}.`
+    lines.push(leadUsed ? head : withLead(head), '')
     for (const h of direct) lines.push(`- ${h.company.name}: ${fmtPct(h.pct)} directly${c.rel(...h.path)}`)
     for (const h of indirect) {
       const via = h.path.slice(0, -1).map((r) => w.byId.get(r.to)!.name)
@@ -176,7 +185,10 @@ const ownership: Writer<'ownership'> = (w, m, c) => {
     const ds = m.directorships.map((r) => `${w.byId.get(r.to)!.name}${r.props.role && r.props.role !== 'director' ? ` (${r.props.role})` : ''}${c.rel(r)}`)
     lines.push('', `${subject.name} is a director of ${joinList(ds)}.`)
   }
-  if (!m.owners.length && !m.holdings.length && !control.length && !m.directors.length && !m.directorships.length) return null
+  if (lead && !leadUsed) {
+    lines.unshift(lead.trim())
+    if (!records) lines.push(`No ownership, directorship or control records exist for ${subject.name}.`)
+  }
   if (!lines[0]) lines.shift()
   return lines.join('\n').trim()
 }

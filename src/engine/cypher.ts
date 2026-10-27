@@ -104,10 +104,25 @@ WHERE NOT ()-[:OWNS]->(owner)
 WITH relationships(p) AS rs
 ${RETURN_RELS}`
     case 'shared':
+      // Address and device: (x)-[:REGISTERED_AT]->(:Address), (:Account)-[:USED_DEVICE]->(:Device), reached
+      // directly or through a held account. Director: (:Person)-[:DIRECTOR_OF]->(:Company) on both sides.
+      if (a.focalLabel === 'Address' || a.focalLabel === 'Device')
+        return `${focal}
+MATCH (focal)<-[r1:REGISTERED_AT|USED_DEVICE]-(other)
+OPTIONAL MATCH (holder)-[r2:HOLDS]->(other:Account)
+WITH [r1, r2] AS rs
+${RETURN_RELS}`
       return `${focal}
-MATCH (focal)-[r1:REGISTERED_AT|USED_DEVICE|DIRECTOR_OF|HOLDS*1..2]-(via)<-[r2:REGISTERED_AT|USED_DEVICE|DIRECTOR_OF]-(other)
-WHERE other <> focal AND (via:Address OR via:Device OR via:Person)
-WITH r1 + [r2] AS rs
+MATCH (focal)-[r1:REGISTERED_AT|USED_DEVICE|HOLDS*1..2]->(via)<-[r2:REGISTERED_AT|USED_DEVICE]-(other)
+WHERE other <> focal AND (via:Address OR via:Device)
+OPTIONAL MATCH (holder)-[r3:HOLDS]->(other:Account)
+WITH r1 + [r2, r3] AS rs
+${RETURN_RELS}
+UNION
+${focal}
+MATCH (focal)<-[d1:DIRECTOR_OF]-(p:Person)-[d2:DIRECTOR_OF]->(other:Company)
+WHERE other <> focal
+WITH [d1, d2] AS rs
 ${RETURN_RELS}`
     case 'sanctions':
       return `${focal}
@@ -117,6 +132,12 @@ WHERE none(m IN relationships(p) WHERE type(m) = 'MATCHES' AND m.disposition = '
 WITH relationships(p) AS rs
 ${RETURN_RELS}`
     case 'trail':
+      if (a.focalLabel === 'Transaction')
+        return `${focal}
+MATCH (acct:Account)-[r1:SENT|RECEIVED]->(focal:Transaction)
+OPTIONAL MATCH (holder)-[r2:HOLDS]->(acct)
+WITH [r1, r2] AS rs
+${RETURN_RELS}`
       return `${focal}
 OPTIONAL MATCH (focal)-[h:HOLDS]->(held:Account)
 WITH coalesce(held, focal) AS a, h
@@ -127,6 +148,14 @@ WITH t, [h, r1, r2, r3] AS rs
 ORDER BY t.date
 ${RETURN_RELS}`
     case 'flagged':
+      if (a.focalLabel === 'Alert')
+        return `${focal}
+MATCH (focal:Alert)-[f:FLAGS]->(t:Transaction)
+OPTIONAL MATCH (payer:Account)-[s:SENT]->(t)
+OPTIONAL MATCH (payee:Account)-[rc:RECEIVED]->(t)
+WITH t, [f, s, rc] AS rs
+ORDER BY t.date
+${RETURN_RELS}`
       return `${focal}
 OPTIONAL MATCH (focal)-[:HOLDS]->(held:Account)
 WITH coalesce(held, focal) AS x
