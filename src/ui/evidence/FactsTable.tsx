@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from 'lucide-react'
+import { confToken } from '../theme/scale'
 import type { Fact } from '../../domain/types'
 
 type Key = 'subject' | 'relation' | 'object' | 'confidence'
@@ -107,7 +108,12 @@ export function FactsTable({ facts }: { facts: Fact[] }) {
                 <td>{f.subject}</td>
                 <td className="facts__rel">{relText(f.relation)}</td>
                 <td>{f.object}</td>
-                <td className="facts__num">{f.confidence.toFixed(2)}</td>
+                <td className="facts__num">
+                  <span className="facts__conf" style={{ '--c': confToken(f.confidence) } as React.CSSProperties}>
+                    <span className="facts__dot" aria-hidden />
+                    {f.confidence.toFixed(2)}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>

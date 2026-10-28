@@ -3,7 +3,8 @@ import { Pause, Play, RotateCcw, SkipBack, SkipForward } from 'lucide-react'
 import type { Subgraph, TraceStage } from '../../domain/types'
 import { useReducedMotion } from '../theme/motion'
 import { Edges, H, NodeMark, W, forceLayout, useZoom } from './Force'
-import { dimmed, summary, type GraphViewProps } from './graphStyle'
+import { dimmed, edgeTint, summary, type GraphViewProps } from './graphStyle'
+import { nodeRisk } from '../theme/scale'
 
 export const STEP_MS = 700
 const LEAD_MS = 300
@@ -124,7 +125,7 @@ export function Replay({ subgraph, trace, dim, onNodeOpen }: GraphViewProps & { 
             edgeClass={(e) =>
               [lit.edges.has(e.id) && 'is-lit', fresh?.edges.includes(e.id) && 'is-fresh', final && e.used && 'is-used'].filter(Boolean).join(' ')
             }
-            edgeStyle={(e) => ({ opacity: dimmed(dim, e.used) })}
+            edgeStyle={(e) => ({ opacity: dimmed(dim, e.used), ...(final ? edgeTint(e) : undefined) })}
           />
           <g className="g-nodes">
             {subgraph.nodes.map((n, idx) => {
@@ -143,6 +144,7 @@ export function Replay({ subgraph, trace, dim, onNodeOpen }: GraphViewProps & { 
                   ring={(final && n.used) || isFresh}
                   filled={n.seed && seedsShown}
                   label={isLit && (n.seed || n.used)}
+                  risk={final ? nodeRisk(subgraph, n) : 0}
                   style={{ opacity: dimmed(dim, n.used) }}
                 />
               )

@@ -233,6 +233,20 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.facts__conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c, var(--ink));
+  font-weight: 600;
+}
+.facts__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c, var(--accent));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--c, var(--accent)) 50%, transparent);
+}
 .facts__sort {
   display: inline-flex;
   align-items: center;

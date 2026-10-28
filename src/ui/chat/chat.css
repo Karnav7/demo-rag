@@ -244,8 +244,8 @@
   box-sizing: border-box;
   border: 1px solid transparent;
   border-radius: 5px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--cite, var(--accent)) 16%, transparent);
+  color: var(--cite, var(--accent));
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
@@ -256,7 +256,7 @@
     border-color 0.2s var(--ease);
 }
 .cite:hover {
-  border-color: var(--accent);
+  border-color: var(--cite, var(--accent));
 }
 .cite:focus-visible,
 .chip:focus-visible,
@@ -340,11 +340,13 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--accent);
+  background: var(--meter, var(--accent));
+  box-shadow: 0 0 10px color-mix(in srgb, var(--meter, var(--accent)) 45%, transparent);
   transform-origin: left center;
 }
 .meter__label b {
-  color: var(--ink);
+  color: var(--meter, var(--ink));
+  transition: color 0.5s var(--ease);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }

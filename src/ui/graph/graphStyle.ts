@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import type { NodeLabel, Subgraph } from '../../domain/types'
+import { confToken, matchScore, riskToken } from '../theme/scale'
 
 export type GraphNode = Subgraph['nodes'][number]
 export type GraphEdge = Subgraph['edges'][number]
@@ -56,6 +58,13 @@ export function useDocumentTheme(): string {
 export function firstCitedSection(g: Subgraph, nodeId: string, cited: ReadonlySet<string>): string | null {
   const touching = g.edges.filter((e) => (e.from === nodeId || e.to === nodeId) && e.section_id && cited.has(e.section_id))
   return (touching.find((e) => e.used) ?? touching[0])?.section_id ?? null
+}
+
+/** Data colour for an edge: sanctions matches by match strength, edges used in the answer by confidence. */
+export function edgeTint(e: GraphEdge): CSSProperties | undefined {
+  if (e.type === 'MATCHES') return { stroke: riskToken(matchScore(e)) }
+  if (e.used) return { stroke: confToken(e.confidence) }
+  return undefined
 }
 
 /** Opacity for an element under the "dim unused" toggle. */

@@ -2,7 +2,8 @@ import { useMemo, useRef } from 'react'
 import { hierarchy, tree, type HierarchyPointNode } from 'd3-hierarchy'
 import type { Subgraph } from '../../domain/types'
 import { H, NodeMark, W, useZoom } from './Force'
-import { LABEL_ORDER, dimmed, labelName, summary, type GraphNode, type GraphViewProps } from './graphStyle'
+import { LABEL_ORDER, dimmed, edgeTint, labelName, summary, type GraphNode, type GraphViewProps } from './graphStyle'
+import { nodeRisk } from '../theme/scale'
 
 /** Tree datum: the root "Graph", a jurisdiction, a label group, or an entity. */
 interface Datum {
@@ -94,7 +95,7 @@ export function Radial({ subgraph, dim, onNodeOpen }: GraphViewProps) {
               key={e.id}
               className={`g-edge g-edge--cross${e.used ? ' is-used' : ''}`}
               d={d}
-              style={{ opacity: dimmed(dim, e.used) }}
+              style={{ opacity: dimmed(dim, e.used), ...edgeTint(e) }}
             >
               <title>{`${name.get(e.from)} ${e.type.replace(/_/g, ' ').toLowerCase()} ${name.get(e.to)}`}</title>
             </path>
@@ -115,6 +116,7 @@ export function Radial({ subgraph, dim, onNodeOpen }: GraphViewProps) {
                   onOpen={() => onNodeOpen(n.id)}
                   style={{ opacity: dimmed(dim, n.used) }}
                   label={n.label === 'Jurisdiction' || n.used || n.seed}
+                  risk={nodeRisk(subgraph, n)}
                 />
               )
             }

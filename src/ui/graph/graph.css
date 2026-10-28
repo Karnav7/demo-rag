@@ -463,3 +463,31 @@
     transition: none;
   }
 }
+
+/* Risk entities (sanctions entries by match strength, alerts): a soft halo; it breathes in dark mode only. */
+.g-halo {
+  opacity: 0.18;
+  pointer-events: none;
+}
+.g-risk--1 .g-halo {
+  opacity: 0.1;
+}
+:root[data-theme='dark'] .g-risk .g-dot {
+  filter: drop-shadow(0 0 4px var(--risk-glow));
+}
+:root[data-theme='dark'] .g-risk--3 .g-halo {
+  animation: g-risk-breathe 3.2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes g-risk-breathe {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.32;
+    transform: scale(1.12);
+  }
+}

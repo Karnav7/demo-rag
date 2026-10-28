@@ -2,11 +2,14 @@ import { useMemo } from 'react'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { loadWorld } from '../../data/load'
+import { confLevel } from '../theme/scale'
 
 interface Props {
   text: string
   /** Known citations; while undefined (still streaming) every `[n]` is styled as a cite. */
   citations?: { n: number; section_id: string }[]
+  /** Confidence of the strongest fact behind each citation; tints its chip on the confidence ramp. */
+  citeConfidence?: Map<number, number>
   onCite?(n: number): void
 }
 
@@ -26,7 +29,7 @@ function citeTitles(citations: { n: number; section_id: string }[]): Map<number,
 }
 
 /** Swaps known `[n]` markers in text nodes (outside code) for citation buttons; `known` maps n to its hover text. */
-function linkCitations(html: string, known: Map<number, string> | null): string {
+function linkCitations(html: string, known: Map<number, string> | null, conf?: Map<number, number>): string {
   const tpl = document.createElement('template')
   tpl.innerHTML = html
   const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT)
@@ -48,6 +51,8 @@ function linkCitations(html: string, known: Map<number, string> | null): string 
       b.setAttribute('aria-label', `Source ${n}`)
       const title = known?.get(n)
       if (title) b.title = title
+      const c = conf?.get(n)
+      if (c !== undefined) b.style.setProperty('--cite', `var(--conf-${confLevel(c)})`)
       b.textContent = String(n)
       frag.append(b)
       last = m.index + m[0].length
@@ -59,12 +64,12 @@ function linkCitations(html: string, known: Map<number, string> | null): string 
 }
 
 /** Renders answer markdown, sanitised, with `[n]` turned into `<button class="cite" data-n>`. */
-export function Markdown({ text, citations, onCite }: Props) {
+export function Markdown({ text, citations, citeConfidence, onCite }: Props) {
   const html = useMemo(() => {
     const raw = marked.parse(text, { async: false, gfm: true, breaks: false })
     const clean = DOMPurify.sanitize(raw)
-    return linkCitations(clean, citations ? citeTitles(citations) : null)
-  }, [text, citations])
+    return linkCitations(clean, citations ? citeTitles(citations) : null, citeConfidence)
+  }, [text, citations, citeConfidence])
 
   const onClick = (e: React.MouseEvent) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button.cite')

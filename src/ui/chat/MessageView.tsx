@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Check, Copy, PanelRight, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
 import type { Message } from '../../store/store'
 import { useAppStore } from '../../store/StoreProvider'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
+import { confToken } from '../theme/scale'
 import { useEvidenceDrawer } from '../evidence/drawer'
 import { Markdown } from './Markdown'
 import { modeLabel, SOURCE_LABEL } from './labels'
@@ -15,6 +16,7 @@ function Meter({ value, grow }: { value: number; grow: boolean }) {
   return (
     <div
       className="meter"
+      style={{ '--meter': confToken(v) } as React.CSSProperties}
       role="meter"
       aria-label="Grounding confidence"
       aria-valuemin={0}
@@ -60,6 +62,14 @@ function UserMessage({ m, fresh }: { m: Message; fresh: boolean }) {
   )
 }
 
+/** Each citation's strongest supporting fact confidence (facts share the cited section). */
+function citeConfidence(r: Message['response']): Map<number, number> | undefined {
+  if (!r) return undefined
+  const best = new Map<string, number>()
+  for (const f of r.facts) if (f.section_id) best.set(f.section_id, Math.max(best.get(f.section_id) ?? 0, f.confidence))
+  return new Map(r.citations.flatMap((c) => (best.has(c.section_id) ? [[c.n, best.get(c.section_id)!] as const] : [])))
+}
+
 function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
   const { settings, selectedMessageId, selectMessage, setHighlight, regenerate, vote, send } = useAppStore()
   const reduced = useReducedMotion()
@@ -74,6 +84,7 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
   const animateLate = streamed.current && !reduced
 
   const r = m.response
+  const citeConf = useMemo(() => citeConfidence(r), [r])
   const selected = selectedMessageId === m.id
   const stage = `${modeLabel(settings.mode)} retrieval · ${settings.source === 'live' ? 'querying Neo4j…' : 'reading snapshot…'}`
 
@@ -111,7 +122,12 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
         <StageLine text={stage} />
       ) : (
         <div className={m.pending ? 'msg__body msg__body--streaming' : 'msg__body'}>
-          <Markdown text={m.text} citations={m.pending ? undefined : (r?.citations ?? [])} onCite={onCite} />
+          <Markdown
+            text={m.text}
+            citations={m.pending ? undefined : (r?.citations ?? [])}
+            citeConfidence={citeConf}
+            onCite={onCite}
+          />
         </div>
       )}
 

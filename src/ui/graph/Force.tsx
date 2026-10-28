@@ -12,7 +12,8 @@ import {
 import { select } from 'd3-selection'
 import { zoom } from 'd3-zoom'
 import type { Subgraph } from '../../domain/types'
-import { activate, cssColor, dimmed, nodeAria, summary, type GraphNode, type GraphViewProps } from './graphStyle'
+import { activate, cssColor, dimmed, edgeTint, nodeAria, summary, type GraphNode, type GraphViewProps } from './graphStyle'
+import { nodeRisk } from '../theme/scale'
 
 /** The drawing box every 2D view lays out in (viewBox units). */
 export const W = 360
@@ -133,6 +134,7 @@ export function NodeMark({
   ring = n.used,
   filled = n.seed,
   label = n.used || n.seed,
+  risk = 0,
   handlers,
 }: {
   n: GraphNode
@@ -145,12 +147,14 @@ export function NodeMark({
   ring?: boolean
   filled?: boolean
   label?: boolean
+  /** 1–3 tints sanctions entries and alerts on the risk ramp (scale.ts nodeRisk). */
+  risk?: number
   handlers?: React.SVGProps<SVGGElement>
 }) {
   const r = n.seed ? 6.5 : 5
   return (
     <g
-      className={`g-node ${className}`}
+      className={`g-node ${className}${risk ? ` g-risk g-risk--${risk}` : ''}`}
       transform={`translate(${x},${y})`}
       aria-label={nodeAria(n)}
       style={style}
@@ -164,7 +168,8 @@ export function NodeMark({
           <circle className="g-hit" r={r + 7} />
           <circle className="g-focus" r={r + 5} />
           <circle className={`g-ring${ring ? ' is-on' : ''}`} r={r + 3.2} />
-          <circle className="g-dot" r={r} style={{ fill: filled ? 'var(--accent)' : cssColor(n.label) }} />
+          {risk > 0 && <circle className="g-halo" r={r + 6} style={{ fill: `var(--risk-${risk})` }} />}
+          <circle className="g-dot" r={r} style={{ fill: filled ? 'var(--accent)' : risk ? `var(--risk-${risk})` : cssColor(n.label) }} />
           {label && <text className="g-name" y={r + 12}>{short(n.name)}</text>}
           <title>{nodeAria(n)}</title>
         </g>
@@ -340,7 +345,7 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
           g={subgraph}
           pos={pos}
           edgeClass={(e) => (e.used ? 'is-used' : '')}
-          edgeStyle={(e) => ({ opacity: dimmed(dim, e.used) })}
+          edgeStyle={(e) => ({ opacity: dimmed(dim, e.used), ...edgeTint(e) })}
         />
         <g className="g-nodes">
           {subgraph.nodes.map((n, i) => {
@@ -356,6 +361,7 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
                 onOpen={() => open(n.id)}
                 style={{ opacity: dimmed(dim, n.used) }}
                 className={pinned.has(n.id) ? 'is-pinned' : ''}
+                risk={nodeRisk(subgraph, n)}
                 handlers={handlers(n.id)}
               />
             )
