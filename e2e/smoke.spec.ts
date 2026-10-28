@@ -108,3 +108,36 @@ test('guide and architecture pages load on demand from the sidebar', async ({ pa
   await page.goto('./#/no-such-page')
   await expect(page.getByRole('group', { name: 'Suggested questions' })).toBeVisible()
 })
+
+test('while answering: busy composer with Stop; stopping keeps a marked partial answer', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('./')
+  await page.getByRole('group', { name: 'Suggested questions' }).getByRole('button').first().click()
+  const composer = page.locator('form.composer')
+  await expect(composer).toHaveClass(/is-busy/)
+  await expect(page.getByRole('status', { name: 'Gathering evidence…' })).toBeVisible()
+  await page.getByRole('button', { name: 'Stop answering' }).click()
+  await expect(composer).not.toHaveClass(/is-busy/)
+  await expect(page.locator('.msg__stopped')).toContainText('Stopped')
+  await expect(page.getByRole('button', { name: 'Send' })).toBeVisible()
+})
+
+test('glass header on scroll; the last answer clears the floating composer', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 640 })
+  await page.goto('./')
+  await askSuggested(page)
+  const box = page.getByRole('textbox', { name: 'Ask a question' })
+  await box.fill('Which regulation applies to Meridian Trade LLC?')
+  await box.press('Enter')
+  await expect(page.getByRole('article', { name: 'Answer' }).nth(1).getByRole('meter')).toBeVisible({ timeout: 15_000 })
+
+  const scroller = page.locator('.chat__scroll')
+  await scroller.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+  await expect(page.locator('.chat__head')).toHaveClass(/is-scrolled/)
+  const last = await page.getByRole('article', { name: 'Answer' }).last().boundingBox()
+  const dock = await page.locator('form.composer').boundingBox()
+  expect(last && dock && last.y + last.height <= dock.y + 1).toBe(true)
+
+  await scroller.evaluate((el) => el.scrollTo({ top: 0 }))
+  await expect(page.locator('.chat__head')).not.toHaveClass(/is-scrolled/)
+})

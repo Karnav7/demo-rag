@@ -31,6 +31,8 @@
 
 .chat {
   position: relative;
+  /* Keeps the dock's full-width fade inside the chat column (not over the sidebar or evidence). */
+  overflow: clip;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -60,10 +62,10 @@
     box-shadow 0.25s var(--ease);
 }
 .chat__head.is-scrolled {
-  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 84%, transparent);
   border-bottom-color: var(--line);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
   box-shadow: 0 6px 20px -14px rgba(0, 0, 0, 0.35);
 }
 .chat__title {

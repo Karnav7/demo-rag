@@ -26,3 +26,24 @@ for (const theme of ['light', 'dark'] as const) {
     })
   }
 }
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`mid-answer and mid-scroll (${theme}, 1440x900)`, async ({ page }) => {
+    test.skip(!dir, 'set SHOTS_DIR to capture screenshots')
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.addInitScript((t) => localStorage.setItem('dummy-rag.theme', t), theme)
+    await page.goto('./')
+    await page.getByRole('group', { name: 'Suggested questions' }).getByRole('button').nth(1).click()
+    await expect(page.getByRole('list', { name: 'Finished stages' })).toBeVisible({ timeout: 10_000 })
+    await page.screenshot({ path: `${dir}/busy-${theme}.png` })
+    await expect(page.getByRole('meter', { name: 'Grounding confidence' })).toBeVisible({ timeout: 15_000 })
+    const box = page.getByRole('textbox', { name: 'Ask a question' })
+    await box.fill('Who ultimately owns Meridian Trade LLC?')
+    await box.press('Enter')
+    await expect(page.getByRole('meter', { name: 'Grounding confidence' }).nth(1)).toBeVisible({ timeout: 15_000 })
+    await page.waitForTimeout(800)
+    await page.locator('.chat__scroll').evaluate((el) => el.scrollTo({ top: el.scrollHeight / 3 }))
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: `${dir}/scrolled-${theme}.png` })
+  })
+}
