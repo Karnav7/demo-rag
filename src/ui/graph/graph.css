@@ -1,5 +1,7 @@
 /* Subgraph tab: view switcher, 2D graph views, legend and dim toggle. */
 .g {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -52,6 +54,10 @@
 }
 
 .g__stage {
+  flex: 1;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
   position: relative;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -59,12 +65,17 @@
   overflow: hidden;
 }
 .g__canvas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   min-height: 220px;
 }
 .g-svg {
   display: block;
+  flex: 1;
   width: 100%;
-  height: auto;
+  height: 100%;
+  min-height: 220px;
   touch-action: none;
   cursor: grab;
   user-select: none;
@@ -202,6 +213,11 @@
 }
 .g-replay .g-node.is-fresh .g-dot {
   filter: drop-shadow(0 0 4px var(--accent));
+}
+.g-replay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .g-replay__bar {
   display: flex;
@@ -384,7 +400,14 @@
 
 /* Depth views (Orbit canvas, three.js 3D): the drawing surface, a hover tag, and the node keys. */
 .g-depth {
+  flex: 1;
+  min-height: 220px;
   position: relative;
+}
+/* The surface is sized from the stage (not the other way round), so the stage can shrink again. */
+.g-depth > canvas {
+  position: absolute;
+  inset: 0;
 }
 .g-depth__surface {
   display: block;

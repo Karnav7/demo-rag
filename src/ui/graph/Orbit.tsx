@@ -95,7 +95,8 @@ export function Orbit({ subgraph, dim, onNodeOpen }: GraphViewProps) {
 
     const size = () => {
       w = wrap.clientWidth || W
-      h = Math.round((w * H) / W)
+      // Fill the stage's height when it has one (the evidence column stretches the graph); else keep the aspect.
+      h = wrap.clientHeight > 0 ? wrap.clientHeight : Math.round((w * H) / W)
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       canvas.width = Math.round(w * dpr)
       canvas.height = Math.round(h * dpr)

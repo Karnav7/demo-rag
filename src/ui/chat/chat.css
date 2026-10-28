@@ -30,6 +30,7 @@
 }
 
 .chat {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -41,12 +42,29 @@
 }
 
 /* Conversation header */
+/* Sticky over the conversation; it turns to frosted glass once content scrolls beneath it. */
 .chat__head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 24px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  transition:
+    background-color 0.25s var(--ease),
+    border-color 0.25s var(--ease),
+    backdrop-filter 0.25s var(--ease),
+    box-shadow 0.25s var(--ease);
+}
+.chat__head.is-scrolled {
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom-color: var(--line);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 6px 20px -14px rgba(0, 0, 0, 0.35);
 }
 .chat__title {
   flex: 1;
@@ -66,6 +84,9 @@
   min-height: 0;
   overflow-y: auto;
   scrollbar-gutter: stable;
+  /* Room for the floating dock, so the last message clears the composer. */
+  padding-bottom: calc(var(--dock-h, 140px) + 24px);
+  scroll-padding-bottom: calc(var(--dock-h, 140px) + 24px);
 }
 
 /* Shared column width for messages, empty state and composer */
@@ -397,10 +418,33 @@
   font-size: 12px;
 }
 
-/* Composer dock */
+/* Composer dock: floats over the foot of the conversation, which scrolls beneath it. */
 .chat__dock {
-  padding-top: 8px;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  padding-top: 28px;
   padding-bottom: 16px;
+  pointer-events: none;
+}
+.chat__dock > * {
+  pointer-events: auto;
+}
+/* A soft fade behind the dock so text dissolves under the composer instead of cutting off. */
+.chat__dock::before {
+  content: '';
+  position: absolute;
+  inset: 0 -100vw;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--bg) 70%, transparent) 45%,
+    color-mix(in srgb, var(--bg) 92%, transparent)
+  );
+  pointer-events: none;
 }
 .chat__fine {
   margin: 8px 0 0;
@@ -410,17 +454,20 @@
 }
 
 .composer {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: var(--panel);
-  backdrop-filter: var(--panel-blur);
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 78%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--dock-shadow);
   transition:
     box-shadow 0.35s var(--ease),
     border-color 0.35s var(--ease),
     background-color 0.5s;
 }
 .composer:focus-within {
-  box-shadow: var(--composer-glow);
+  box-shadow: var(--composer-glow), var(--dock-shadow);
   border-color: var(--composer-line-focus);
 }
 .composer__input {
@@ -632,7 +679,7 @@
 /* Evidence column (tabs and drawer: ../evidence/evidence.css) */
 .evidence {
   flex: none;
-  width: clamp(300px, 34%, 440px);
+  width: clamp(360px, 40%, 600px);
   box-sizing: border-box;
   border-left: 1px solid var(--line);
   background: var(--side);

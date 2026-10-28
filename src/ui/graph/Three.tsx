@@ -391,7 +391,7 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
 
     const size = () => {
       const w = wrap.clientWidth || W
-      const h = Math.round((w * H) / W)
+      const h = wrap.clientHeight > 0 ? wrap.clientHeight : Math.round((w * H) / W)
       renderer.setSize(w, h)
       camera.aspect = w / h
       camera.updateProjectionMatrix()

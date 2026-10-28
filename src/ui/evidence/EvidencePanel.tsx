@@ -99,7 +99,7 @@ export function EvidencePanel({
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={tab}
-            className="ev__body"
+            className={`ev__body${tab === 'graph' ? ' ev__body--fill' : ''}`}
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}

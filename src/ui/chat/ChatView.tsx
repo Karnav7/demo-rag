@@ -29,15 +29,18 @@ function download(name: string, json: string) {
 
 function ChatHeader({
   conv,
+  scrolled,
   drawer,
 }: {
   conv: Conversation
+  /** The conversation has scrolled under the header: it turns translucent glass. */
+  scrolled: boolean
   drawer: { narrow: boolean; open: boolean; openerRef: React.RefObject<HTMLButtonElement | null>; onOpen(): void }
 }) {
   const { exportConversation, clear } = useAppStore()
   const pop = usePopover('[role="menuitem"]')
   return (
-    <header className="chat__head">
+    <header className={`chat__head${scrolled ? ' is-scrolled' : ''}`}>
       <h2 className="chat__title" title={conv.title}>{conv.title}</h2>
       {drawer.narrow && (
         <button
@@ -117,6 +120,9 @@ export function ChatView() {
   const conv = conversations.find((c) => c.id === activeId)
   const messages = conv?.messages ?? []
   const scrollRef = useRef<HTMLDivElement>(null)
+  const chatRef = useRef<HTMLElement>(null)
+  const dockRef = useRef<HTMLDivElement>(null)
+  const [scrolled, setScrolled] = useState(false)
   const stick = useRef(true)
   const count = useRef(messages.length)
   const [since] = useState(() => Date.now())
@@ -158,16 +164,33 @@ export function ChatView() {
     stick.current = true
   }, [activeId])
 
+  // The floating dock overlays the conversation: reserve its height at the foot of the scroller.
+  useLayoutEffect(() => {
+    const dock = dockRef.current
+    const chat = chatRef.current
+    if (!dock || !chat) return
+    const set = () => chat.style.setProperty('--dock-h', `${dock.offsetHeight}px`)
+    set()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(set)
+    ro.observe(dock)
+    return () => ro.disconnect()
+  }, [])
+
   const onScroll = () => {
     const el = scrollRef.current
-    if (el) stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (!el) return
+    stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    setScrolled(el.scrollTop > 4)
   }
 
   return (
     <div className="chat-route">
-      <section className="chat" aria-label="Chat">
-        {conv && messages.length > 0 && <ChatHeader conv={conv} drawer={{ narrow, open: shown, openerRef, onOpen: openDrawer }} />}
+      <section className="chat" aria-label="Chat" ref={chatRef}>
         <div className="chat__scroll" ref={scrollRef} onScroll={onScroll}>
+          {conv && messages.length > 0 && (
+            <ChatHeader conv={conv} scrolled={scrolled} drawer={{ narrow, open: shown, openerRef, onOpen: openDrawer }} />
+          )}
           {conv && messages.length > 0 ? (
             <EvidenceDrawerContext.Provider value={{ show: () => narrow && openDrawer() }}>
               <MessageList messages={messages} since={since} />
@@ -176,7 +199,7 @@ export function ChatView() {
             <EmptyState onAsk={(q) => void send(q)} />
           )}
         </div>
-        <div className="chat__dock">
+        <div className="chat__dock" ref={dockRef}>
           <Composer />
           {messages.length > 0 && (
             <p className="chat__fine">Fictional data for demonstration. Not financial or legal advice.</p>
