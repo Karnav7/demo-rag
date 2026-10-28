@@ -30,8 +30,11 @@ export function EvidencePanel({
   onTab,
   highlightSectionId,
   onOpenSection,
+  pending = false,
 }: {
   response: ChatResponse | null
+  /** The selected answer is still arriving: show a skeleton rather than the empty prompt. */
+  pending?: boolean
   tab: EvidenceTab
   onTab(t: EvidenceTab): void
   /** Section to mark in the Sources tab (set by citation clicks). */
@@ -44,6 +47,7 @@ export function EvidencePanel({
   /** Feedback for a graph node with no cited passage to open; belongs to the response it was raised on. */
   const [note, setNote] = useState<{ for: ChatResponse; text: string } | null>(null)
 
+  if (!response && pending) return <EvidenceSkeleton />
   if (!response) return <p className="evidence__empty">Ask a question to see its evidence.</p>
 
   const idx = TABS.findIndex((t) => t.id === tab)
@@ -134,6 +138,25 @@ export function EvidencePanel({
             {tab === 'trace' && <TraceSteps trace={response.trace} totalMs={response.stats.totalMs} />}
           </motion.div>
         </AnimatePresence>
+      </div>
+    </div>
+  )
+}
+
+/** Placeholder shapes for the evidence of an answer still on its way (tabs, a graph stage, a few rows). */
+function EvidenceSkeleton() {
+  return (
+    <div className="ev ev--loading" role="status" aria-label="Gathering evidence…">
+      <div className="ev-skel__tabs" aria-hidden>
+        {TABS.map((t) => (
+          <span key={t.id} className="ev-skel__bar ev-skel__tab" />
+        ))}
+      </div>
+      <div className="ev-skel__body" aria-hidden>
+        <span className="ev-skel__bar ev-skel__stage" />
+        <span className="ev-skel__bar" />
+        <span className="ev-skel__bar ev-skel__short" />
+        <span className="ev-skel__bar" />
       </div>
     </div>
   )

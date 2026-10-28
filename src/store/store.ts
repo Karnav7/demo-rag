@@ -12,6 +12,8 @@ export interface Message {
   pending?: boolean
   stages?: TraceStage[]
   vote?: 'up' | 'down' | null
+  /** The answer was interrupted (Stop, a conversation switch, or a reload) before it finished. */
+  stopped?: boolean
 }
 export interface Conversation { id: string; title: string; createdAt: number; updatedAt: number; messages: Message[] }
 /** A cited section to emphasise in the evidence column (set by citation and graph-node clicks). */
@@ -33,7 +35,8 @@ const isMessage = (v: unknown): v is Message =>
   typeof v.text === 'string' && typeof v.createdAt === 'number' &&
   (v.response === undefined || isResponse(v.response)) &&
   (v.stages === undefined || arr(v.stages)) &&
-  (v.vote === undefined || v.vote === null || v.vote === 'up' || v.vote === 'down')
+  (v.vote === undefined || v.vote === null || v.vote === 'up' || v.vote === 'down') &&
+  (v.stopped === undefined || typeof v.stopped === 'boolean')
 const isConversation = (v: unknown): v is Conversation =>
   isObj(v) && typeof v.id === 'string' && typeof v.title === 'string' &&
   typeof v.createdAt === 'number' && typeof v.updatedAt === 'number' &&
@@ -52,6 +55,8 @@ export interface StoreState {
   selectedMessageId: string | null
   /** Transient; never persisted, reset when the active conversation changes or is cleared. */
   highlight: Highlight | null
+  /** An answer is streaming into the active conversation. */
+  isStreaming: boolean
   newConversation(): string
   select(id: string): void
   rename(id: string, title: string): void
@@ -62,6 +67,8 @@ export interface StoreState {
   vote(messageId: string, v: 'up' | 'down' | null): void
   selectMessage(id: string | null): void
   setHighlight(h: Highlight | null): void
+  /** Stop the answer streaming into the active conversation; its partial text is kept and marked stopped. */
+  stop(): void
   patchSettings(p: Partial<Settings>): void
   exportConversation(id: string): string
   search(q: string): Conversation[]
@@ -80,7 +87,7 @@ const startOfDay = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0
 function loadConversations(): Conversation[] {
   // Malformed conversations are dropped individually; the rest survive.
   const list = storage.get<unknown[]>(CONVERSATIONS_KEY, [], isArray).filter(isConversation)
-  return list.map((c) => ({ ...c, messages: c.messages.map((m) => (m.pending ? { ...m, pending: false } : m)) }))
+  return list.map((c) => ({ ...c, messages: c.messages.map((m) => (m.pending ? { ...m, pending: false, stopped: true } : m)) }))
 }
 
 export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?: () => number } = {}): AppStore {
@@ -103,7 +110,8 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
       if (explicitSelected && active.messages.some((m) => m.id === explicitSelected && m.role === 'assistant')) sel = explicitSelected
       else sel = [...active.messages].reverse().find((m) => m.role === 'assistant')?.id ?? null
     }
-    return { ...actions, conversations, activeId, settings, selectedMessageId: sel, highlight }
+    const isStreaming = !!inflight && inflight.convId === activeId
+    return { ...actions, conversations, activeId, settings, selectedMessageId: sel, highlight, isStreaming }
   }
   function emit(persist: 'all' | 'none' = 'all') {
     if (persist === 'all') {
@@ -126,7 +134,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     const { ctrl, convId, msgId } = inflight
     inflight = null
     ctrl.abort()
-    updateMsg(convId, msgId, (m) => ({ ...m, pending: false }))
+    updateMsg(convId, msgId, (m) => ({ ...m, pending: false, stopped: true }))
   }
 
   async function stream(convId: string, msgId: string, req: ChatRequest) {
@@ -134,37 +142,31 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     const ctrl = new AbortController()
     const mine = { ctrl, convId, msgId }
     inflight = mine
+    emit('none') // publish isStreaming before the first event arrives
     const live = () => inflight === mine && !ctrl.signal.aborted
     const settle = (fn: (m: Message) => Message, persist: 'all' | 'none' = 'all') => {
       updateMsg(convId, msgId, fn)
       emit(persist)
     }
+    // Terminal updates clear the in-flight marker first, so the emitted state no longer reports streaming.
+    const finish = (fn: (m: Message) => Message) => {
+      inflight = null
+      settle(fn)
+    }
+    const failed = (message: string) => finish((m) => ({ ...m, pending: false, text: `Something went wrong: ${message}` }))
     try {
       for await (const ev of clientFor(req.settings.source).chat(req, ctrl.signal)) {
         if (!live()) return
         if (ev.type === 'stage') settle((m) => ({ ...m, stages: [...(m.stages ?? []), ev.stage] }), 'none')
         else if (ev.type === 'token') settle((m) => ({ ...m, text: m.text + ev.text }), 'none')
-        else if (ev.type === 'done') {
-          settle((m) => ({ ...m, response: ev.response, text: ev.response.answer, pending: false }))
-          inflight = null
-          return
-        } else if (ev.type === 'error') {
-          settle((m) => ({ ...m, pending: false, text: `Something went wrong: ${ev.message}` }))
-          inflight = null
-          return
-        }
+        else if (ev.type === 'done') return finish((m) => ({ ...m, response: ev.response, text: ev.response.answer, pending: false }))
+        else if (ev.type === 'error') return failed(ev.message)
       }
     } catch (e) {
-      if (live()) {
-        settle((m) => ({ ...m, pending: false, text: `Something went wrong: ${e instanceof Error ? e.message : String(e)}` }))
-        inflight = null
-      }
+      if (live()) failed(e instanceof Error ? e.message : String(e))
       return
     }
-    if (live()) { // iterator ended without done/error
-      settle((m) => ({ ...m, pending: false }))
-      inflight = null
-    }
+    if (live()) finish((m) => ({ ...m, pending: false })) // iterator ended without done/error
   }
 
   function startAnswer(convId: string, question: string, history: ChatRequest['history'], msgId: string) {
@@ -262,6 +264,11 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     setHighlight(h: Highlight | null) {
       highlight = h
       emit('none')
+    },
+    stop() {
+      if (!inflight || inflight.convId !== activeId) return
+      abort()
+      emit()
     },
     patchSettings(p: Partial<Settings>) {
       settings = { ...settings, ...p }

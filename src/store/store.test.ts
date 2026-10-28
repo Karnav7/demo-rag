@@ -203,4 +203,55 @@ describe('store', () => {
     s.getState().clear(first)
     expect(s.getState().highlight).toBeNull()
   })
+
+  describe('stop and streaming state', () => {
+    const hanging = (signals: AbortSignal[]) => ({
+      clientFor: () => ({
+        async *chat(_req: unknown, signal: AbortSignal) {
+          signals.push(signal)
+          yield { type: 'token' as const, text: 'partial ' }
+          await new Promise<void>((res) => signal.addEventListener('abort', () => res()))
+        },
+      }),
+    })
+
+    it('reports streaming while an answer arrives, and not after it completes', async () => {
+      const s = createStore()
+      expect(s.getState().isStreaming).toBe(false)
+      const p = s.getState().send(Q)
+      expect(s.getState().isStreaming).toBe(true)
+      await vi.runAllTimersAsync()
+      await p
+      expect(s.getState().isStreaming).toBe(false)
+    })
+
+    it('stop() aborts, keeps the partial text and marks the answer stopped', async () => {
+      const signals: AbortSignal[] = []
+      const s = createStore(hanging(signals))
+      void s.getState().send(Q)
+      await vi.advanceTimersByTimeAsync(0)
+      s.getState().stop()
+      const a = msgs(s, s.getState().activeId!)[1]
+      expect(signals[0].aborted).toBe(true)
+      expect(s.getState().isStreaming).toBe(false)
+      expect(a).toMatchObject({ pending: false, stopped: true, text: 'partial ' })
+    })
+
+    it('a completed answer is never marked stopped', async () => {
+      const s = createStore()
+      const p = s.getState().send(Q)
+      await vi.runAllTimersAsync()
+      await p
+      expect(msgs(s, s.getState().activeId!)[1].stopped).toBeUndefined()
+    })
+
+    it('an answer interrupted by a reload comes back marked stopped', () => {
+      const saved = [{ id: 'c', title: 't', createdAt: 1, updatedAt: 1, messages: [
+        { id: 'u', role: 'user', text: 'q', createdAt: 1 },
+        { id: 'a', role: 'assistant', text: 'half', createdAt: 1, pending: true },
+      ] }]
+      localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(saved))
+      expect(createStore().getState().conversations[0].messages[1]).toMatchObject({ pending: false, stopped: true })
+    })
+  })
 })

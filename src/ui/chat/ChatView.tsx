@@ -225,6 +225,7 @@ export function ChatView() {
           tab={tab}
           onTab={setTab}
           highlightSectionId={sectionId}
+          pending={!!selected?.pending}
           onOpenSection={(s) => selectedMessageId && setHighlight({ messageId: selectedMessageId, sectionId: s })}
         />
       </aside>

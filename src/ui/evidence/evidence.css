@@ -512,3 +512,50 @@
     animation: none;
   }
 }
+
+/* Skeleton while the selected answer is still arriving. */
+.ev--loading {
+  padding: 14px 18px;
+  gap: 18px;
+}
+.ev-skel__tabs {
+  display: flex;
+  gap: 14px;
+}
+.ev-skel__tab {
+  width: 52px;
+  height: 10px;
+}
+.ev-skel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ev-skel__bar {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--line) 0%,
+    color-mix(in srgb, var(--accent) 14%, var(--line)) 50%,
+    var(--line) 100%
+  );
+  background-size: 200% 100%;
+  animation: ev-shimmer 1.6s ease-in-out infinite;
+}
+.ev-skel__stage {
+  height: 240px;
+  border-radius: 12px;
+}
+.ev-skel__short {
+  width: 60%;
+}
+@keyframes ev-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}

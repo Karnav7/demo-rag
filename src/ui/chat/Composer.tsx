@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { ArrowUp, Check, ChevronDown, Database, Layers } from 'lucide-react'
+import { ArrowUp, Check, ChevronDown, Database, Layers, Square } from 'lucide-react'
 import { useAppStore } from '../../store/StoreProvider'
 import { isLiveSimulated } from '../../client/chatClient'
 import type { Mode, Source } from '../../domain/types'
@@ -69,7 +69,7 @@ function Toggle({ label, aria, on, onChange }: { label: string; aria: string; on
 }
 
 export function Composer() {
-  const { settings, patchSettings, send } = useAppStore()
+  const { settings, patchSettings, send, isStreaming, stop } = useAppStore()
   const [text, setText] = useState('')
   const ref = useRef<HTMLTextAreaElement>(null)
   const empty = !text.trim()
@@ -83,7 +83,8 @@ export function Composer() {
   }, [text])
 
   const submit = () => {
-    if (empty) return
+    // While an answer streams the button is Stop; a new question waits until it finishes or is stopped.
+    if (empty || isStreaming) return
     void send(text)
     setText('')
   }
@@ -96,7 +97,8 @@ export function Composer() {
 
   return (
     <form
-      className="composer"
+      className={`composer${isStreaming ? ' is-busy' : ''}`}
+      aria-busy={isStreaming}
       onSubmit={(e) => {
         e.preventDefault()
         submit()
@@ -115,6 +117,9 @@ export function Composer() {
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
             e.preventDefault()
             submit()
+          } else if (e.key === 'Escape' && isStreaming) {
+            e.preventDefault()
+            stop()
           }
         }}
       />
@@ -147,9 +152,15 @@ export function Composer() {
             onChange={(generateAnswer) => patchSettings({ generateAnswer })}
           />
         </div>
-        <button type="submit" className="composer__send" aria-label="Send" disabled={empty}>
-          <ArrowUp size={16} aria-hidden />
-        </button>
+        {isStreaming ? (
+          <button type="button" className="composer__send composer__send--stop" aria-label="Stop answering" title="Stop (Esc)" onClick={stop}>
+            <Square size={12} fill="currentColor" aria-hidden />
+          </button>
+        ) : (
+          <button type="submit" className="composer__send" aria-label="Send" disabled={empty}>
+            <ArrowUp size={16} aria-hidden />
+          </button>
+        )}
       </div>
     </form>
   )

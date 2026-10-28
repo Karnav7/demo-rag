@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { motion } from 'motion/react'
-import { Check, Copy, PanelRight, RotateCcw, ThumbsDown, ThumbsUp } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
+import { Check, Copy, PanelRight, RotateCcw, Square, ThumbsDown, ThumbsUp } from 'lucide-react'
 import type { Message } from '../../store/store'
+import type { TraceStage } from '../../domain/types'
 import { useAppStore } from '../../store/StoreProvider'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { confToken } from '../theme/scale'
@@ -39,12 +40,55 @@ function Meter({ value, grow }: { value: number; grow: boolean }) {
   )
 }
 
-function StageLine({ text }: { text: string }) {
+/** How many finished stages stay visible as ticks; older ones fold into "+N". */
+const STAGE_TICKS = 4
+
+/**
+ * Live retrieval progress for a pending answer: the stage just reached shimmers on the status line
+ * (cross-fading as stages arrive), finished stages collapse into a quiet row of ticks.
+ */
+function StageProgress({ stages, thinking }: { stages: TraceStage[]; thinking: string }) {
+  const reduced = useReducedMotion()
+  const current = stages.at(-1)
+  const done = stages.slice(0, -1)
+  const shown = done.slice(-STAGE_TICKS)
+  const folded = done.length - shown.length
+  const text = current ? `${current.title}…` : thinking
   return (
-    <p className="stage" role="status">
-      <span className="stage__dot" aria-hidden />
-      <span className="stage__text">{text}</span>
-    </p>
+    <div className="stage">
+      <p className="stage__line" role="status">
+        <span className="stage__dot" aria-hidden />
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={text}
+            className="stage__text"
+            initial={reduced ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduced ? undefined : { opacity: 0, y: -4 }}
+            transition={{ duration: DUR.fast, ease: EASE }}
+          >
+            {text}
+          </motion.span>
+        </AnimatePresence>
+      </p>
+      {done.length > 0 && (
+        <ul className="stage__done" aria-label="Finished stages">
+          {folded > 0 && <li className="stage__more">+{folded}</li>}
+          {shown.map((t, i) => (
+            <motion.li
+              key={`${t.id}-${done.length - shown.length + i}`}
+              className="stage__tick"
+              initial={reduced ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: DUR.fast, ease: EASE }}
+            >
+              <Check size={11} aria-hidden />
+              {t.title.replace(/\s*\(.*\)$/, '')}
+            </motion.li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
@@ -119,7 +163,7 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
       transition={{ duration: DUR.slow, ease: EASE }}
     >
       {m.pending && !m.text ? (
-        <StageLine text={stage} />
+        <StageProgress stages={m.stages ?? []} thinking={stage} />
       ) : (
         <div className={m.pending ? 'msg__body msg__body--streaming' : 'msg__body'}>
           <Markdown
@@ -129,6 +173,12 @@ function AssistantMessage({ m, fresh }: { m: Message; fresh: boolean }) {
             onCite={onCite}
           />
         </div>
+      )}
+
+      {m.stopped && !m.pending && (
+        <p className="msg__stopped">
+          <Square size={9} fill="currentColor" aria-hidden /> Stopped{m.text ? ' — this answer is incomplete' : ' before an answer arrived'}
+        </p>
       )}
 
       {r && !m.pending && (
