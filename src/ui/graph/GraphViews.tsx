@@ -1,6 +1,6 @@
 import { Component, lazy, Suspense, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { Subgraph, TraceStage } from '../../domain/types'
+import type { NodeLabel, Subgraph, TraceStage } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { Force } from './Force'
 import { Legend } from './Legend'
@@ -68,7 +68,12 @@ export function GraphViews({ subgraph, trace, onNodeOpen }: GraphViewsProps) {
   const [dim, setDim] = useState(false)
   const reduced = useReducedMotion()
   const refs = useRef<Partial<Record<GraphVariant, HTMLButtonElement | null>>>({})
-  const labels = useMemo(() => LABEL_ORDER.filter((l) => subgraph.nodes.some((n) => n.label === l)), [subgraph])
+  const counts = useMemo(() => {
+    const c: Partial<Record<NodeLabel, number>> = {}
+    for (const n of subgraph.nodes) c[n.label] = (c[n.label] ?? 0) + 1
+    return c
+  }, [subgraph])
+  const labels = useMemo(() => LABEL_ORDER.filter((l) => counts[l]), [counts])
 
   if (!subgraph.nodes.length) return <p className="ev-empty">No graph for this answer.</p>
 
@@ -132,7 +137,7 @@ export function GraphViews({ subgraph, trace, onNodeOpen }: GraphViewsProps) {
         </AnimatePresence>
       </div>
       <div className="g__foot">
-        <Legend labels={labels} />
+        <Legend labels={labels} counts={counts} />
         <label className="g-switch">
           <input type="checkbox" role="switch" checked={dim} onChange={(e) => setDim(e.target.checked)} />
           <span className="g-switch__track" aria-hidden />

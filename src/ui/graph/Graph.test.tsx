@@ -89,7 +89,14 @@ describe('Graph views', () => {
   it('legend lists only present labels', () => {
     render(<GraphViews subgraph={subgraph} trace={trace} onNodeOpen={() => {}} />)
     const items = within(screen.getByRole('list', { name: 'Node types' })).getAllByRole('listitem')
-    expect(items.map((li) => li.textContent)).toEqual(['Person', 'Company', 'Account'])
+    expect(items.map((li) => li.firstChild?.nextSibling?.textContent)).toEqual(['Person', 'Company', 'Account'])
+  })
+
+  it('legend counts the nodes of each label', () => {
+    render(<GraphViews subgraph={subgraph} trace={trace} onNodeOpen={() => {}} />)
+    const items = within(screen.getByRole('list', { name: 'Node types' })).getAllByRole('listitem')
+    const expected = ['Person', 'Company', 'Account'].map((l) => String(subgraph.nodes.filter((n) => n.label === l).length))
+    expect(items.map((li) => li.querySelector('.g-legend__n')?.textContent)).toEqual(expected)
   })
 
   it('svg summarises counts; radial keeps nodes openable', async () => {
