@@ -91,7 +91,7 @@ export function Guide() {
         <p>The Subgraph tab can draw the same data five ways. Your choice is remembered.</p>
         <dl>
           <dt>Force</dt>
-          <dd>A physics layout where connected nodes pull together. Drag a node to rearrange it; click a node to open its source.</dd>
+          <dd>A physics layout where connected nodes pull together. Drag a node to pin it where you drop it, double-click to release it; click a node to open its source.</dd>
           <dt>Radial</dt>
           <dd>A tree fanned out from the centre, grouped by jurisdiction and then by node type, which makes it easy to see where the entities sit.</dd>
           <dt>Orbit</dt>
@@ -142,7 +142,7 @@ export function Guide() {
           <dt><kbd>Esc</kbd></dt><dd>Close an open menu, popover or drawer, or cancel a rename, and return focus where it was.</dd>
           <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd> <kbd>End</kbd></dt><dd>Move between evidence tabs and between graph views.</dd>
           <dt>Scroll on a graph</dt><dd>Zoom in and out; drag the background to pan.</dd>
-          <dt>Drag a node in Force</dt><dd>Reposition it; the rest of the graph reacts.</dd>
+          <dt>Drag a node in Force</dt><dd>Reposition it and pin it there; the rest of the graph reacts. Double-click a pinned node to release it.</dd>
           <dt>Click a node</dt><dd>Open its source passage.</dd>
         </dl>
       </Sec>

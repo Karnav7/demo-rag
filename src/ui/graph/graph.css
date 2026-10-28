@@ -141,6 +141,11 @@
 .g-node:hover .g-dot {
   filter: brightness(1.08);
 }
+/* Pinned by a drag in Force: a solid ink outline until a double-click releases it. */
+.g-node.is-pinned .g-dot {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
 .g-name,
 .g-group text {
   font-size: 8.5px;

@@ -215,6 +215,27 @@ describe('Graph views', () => {
       fireEvent.pointerUp(el, { clientX: 30, clientY: 25, pointerId: 1 })
     }
 
+    it('a drag pins the node; a double-click releases it', () => {
+      const restore = withCTM()
+      vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)
+      try {
+        render(<Force subgraph={subgraph} dim={false} onNodeOpen={() => {}} />)
+        const el = screen.getByRole('button', { name: 'Meridian Ltd (Company)' })
+        const other = screen.getByRole('button', { name: 'Ada Vance (Person)' })
+        fireEvent.doubleClick(el) // nothing pinned yet: a no-op
+        expect(el).not.toHaveClass('is-pinned')
+        drag(el)
+        expect(el).toHaveClass('is-pinned')
+        expect(other).not.toHaveClass('is-pinned')
+        fireEvent.doubleClick(other) // releasing an unpinned node changes nothing
+        expect(el).toHaveClass('is-pinned')
+        fireEvent.doubleClick(el)
+        expect(el).not.toHaveClass('is-pinned')
+      } finally {
+        restore()
+      }
+    })
+
     it('a drag does not open the node; a plain click (even right after) does', async () => {
       const restore = withCTM()
       vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)

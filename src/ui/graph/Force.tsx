@@ -221,10 +221,13 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
   /** True only between the pointerup that ends a drag and the click event the browser fires right after it. */
   const suppressClick = useRef(false)
   const suppressTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  /** Nodes a drag has pinned where they were dropped; a double-click releases one. */
+  const [pinned, setPinned] = useState<ReadonlySet<string>>(() => new Set())
 
   // Reset to the settled layout whenever the subgraph changes; stop any live simulation on change/unmount.
   useEffect(() => {
     setPos(base)
+    setPinned(new Set())
     return () => {
       if (sim.current?.raf) cancelAnimationFrame(sim.current.raf)
       sim.current = null
@@ -300,12 +303,28 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
       if (!node) return
       node.fx = p.x
       node.fy = p.y
+      if (!pinned.has(id)) setPinned((s) => new Set(s).add(id))
       live.target = 0.12
       live.st.reheat(0.3)
       if (!live.raf) run(live)
     },
     onPointerUp: endDrag,
     onPointerCancel: endDrag,
+    onDoubleClick: () => {
+      const live = sim.current
+      const node = live?.byId.get(id)
+      if (!live || !node || !pinned.has(id)) return
+      node.fx = null
+      node.fy = null
+      setPinned((s) => {
+        const next = new Set(s)
+        next.delete(id)
+        return next
+      })
+      live.target = 0
+      live.st.reheat(0.3)
+      if (!live.raf) run(live)
+    },
   })
 
   const open = (id: string) => {
@@ -335,6 +354,7 @@ export function Force({ subgraph, dim, onNodeOpen }: GraphViewProps) {
                 i={i}
                 onOpen={() => open(n.id)}
                 style={{ opacity: dimmed(dim, n.used) }}
+                className={pinned.has(n.id) ? 'is-pinned' : ''}
                 handlers={handlers(n.id)}
               />
             )
