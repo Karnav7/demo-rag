@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useOutlet } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useOutlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { PanelLeft } from 'lucide-react'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { useDrawer } from './useDrawer'
 import { Sidebar } from './Sidebar'
+import { useAppStore } from '../../store/StoreProvider'
+import { COMPOSER_INPUT_ID } from '../chat/Composer'
 import './shell.css'
 
 const NARROW = '(max-width: 759px)'
@@ -26,6 +28,22 @@ export function Shell() {
   const { pathname } = useLocation()
   const outlet = useOutlet()
   const reduced = useReducedMotion()
+  const { newConversation } = useAppStore()
+  const navigate = useNavigate()
+
+  // Ctrl/⌘+K: a fresh conversation from anywhere, with the cursor in the question box.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.key.toLowerCase() !== 'k') return
+      e.preventDefault()
+      newConversation()
+      navigate('/')
+      hide()
+      requestAnimationFrame(() => document.getElementById(COMPOSER_INPUT_ID)?.focus())
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [newConversation, navigate, hide])
 
   useEffect(() => {
     try {

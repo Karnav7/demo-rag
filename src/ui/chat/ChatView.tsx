@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Download, Eraser, MoreHorizontal, PanelRight, X } from 'lucide-react'
+import { ArrowDown, Download, Eraser, MoreHorizontal, PanelRight, X } from 'lucide-react'
 import type { Conversation, Message } from '../../store/store'
 import { useAppStore } from '../../store/StoreProvider'
-import { useReducedMotion } from '../theme/motion'
+import { DUR, EASE, useReducedMotion } from '../theme/motion'
+import { AnimatePresence, motion } from 'motion/react'
 import { Composer, COMPOSER_INPUT_ID } from './Composer'
 import { EmptyState } from './EmptyState'
 import { MessageView } from './MessageView'
@@ -116,13 +117,16 @@ function MessageList({ messages, since }: { messages: Message[]; since: number }
 }
 
 export function ChatView() {
-  const { conversations, activeId, send, selectedMessageId, highlight, setHighlight } = useAppStore()
+  const { conversations, activeId, send, selectedMessageId, highlight, setHighlight, isStreaming, stop } = useAppStore()
   const conv = conversations.find((c) => c.id === activeId)
   const messages = conv?.messages ?? []
   const scrollRef = useRef<HTMLDivElement>(null)
   const chatRef = useRef<HTMLElement>(null)
   const dockRef = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
   const [scrolled, setScrolled] = useState(false)
+  /** The reader has scrolled up away from the newest content. */
+  const [away, setAway] = useState(false)
   const stick = useRef(true)
   const count = useRef(messages.length)
   const [since] = useState(() => Date.now())
@@ -180,9 +184,41 @@ export function ChatView() {
   const onScroll = () => {
     const el = scrollRef.current
     if (!el) return
-    stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    const fromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    stick.current = fromBottom < 80
     setScrolled(el.scrollTop > 4)
+    setAway(fromBottom > 200)
   }
+
+  const jumpToLatest = () => {
+    const el = scrollRef.current
+    if (!el) return
+    stick.current = true
+    setAway(false)
+    el.scrollTo({ top: el.scrollHeight, behavior: reduced ? 'auto' : 'smooth' })
+  }
+
+  // Shortcuts: / focuses the question box; Ctrl/⌘+. toggles the evidence drawer (or moves to the evidence
+  // tabs when the column is always visible); Esc stops an answer when nothing else claimed the key.
+  useEffect(() => {
+    const typing = (t: EventTarget | null) =>
+      t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !typing(e.target)) {
+        e.preventDefault()
+        document.getElementById(COMPOSER_INPUT_ID)?.focus()
+      } else if ((e.ctrlKey || e.metaKey) && e.key === '.') {
+        e.preventDefault()
+        if (narrow) (shown ? closeDrawer : openDrawer)()
+        else document.querySelector<HTMLElement>('.ev__tab[aria-selected="true"]')?.focus()
+      } else if (e.key === 'Escape' && isStreaming && !e.defaultPrevented) {
+        e.preventDefault()
+        stop()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [narrow, shown, openDrawer, closeDrawer, isStreaming, stop])
 
   return (
     <div className="chat-route">
@@ -200,6 +236,22 @@ export function ChatView() {
           )}
         </div>
         <div className="chat__dock" ref={dockRef}>
+          <AnimatePresence>
+            {away && messages.length > 0 && (
+              <motion.button
+                type="button"
+                className="pill chat__jump"
+                onClick={jumpToLatest}
+                initial={reduced ? false : { opacity: 0, y: 8, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={reduced ? undefined : { opacity: 0, y: 6 }}
+                transition={{ duration: DUR.fast, ease: EASE }}
+              >
+                {isStreaming && <span className="chat__jump-dot" aria-hidden />}
+                <ArrowDown size={13} aria-hidden /> Jump to latest
+              </motion.button>
+            )}
+          </AnimatePresence>
           <Composer />
           {messages.length > 0 && (
             <p className="chat__fine">Fictional data for demonstration. Not financial or legal advice.</p>

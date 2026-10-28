@@ -6,13 +6,13 @@ import { createStore } from '../../store/store'
 import { StoreProvider } from '../../store/StoreProvider'
 import { Shell } from './Shell'
 
-function mount(narrow: boolean) {
+function mount(narrow: boolean, store = createStore()) {
   vi.stubGlobal('matchMedia', (q: string) => ({
     matches: q.includes('max-width') ? narrow : false,
     media: q, addEventListener: () => {}, removeEventListener: () => {},
   }))
   render(
-    <StoreProvider store={createStore()}>
+    <StoreProvider store={store}>
       <MemoryRouter>
         <Routes>
           <Route element={<Shell />}>
@@ -67,5 +67,20 @@ describe('Shell drawer', () => {
   it('wide layout is never inert', () => {
     mount(false)
     expect(document.querySelector('aside.sb')).not.toHaveAttribute('inert')
+  })
+})
+
+describe('Shell shortcuts', () => {
+  it('Ctrl/⌘+K starts a new conversation', async () => {
+    const store = createStore()
+    mount(false, store)
+    const before = store.getState().activeId
+    await userEvent.keyboard('{Control>}k{/Control}')
+    expect(store.getState().activeId).not.toBe(before)
+    expect(store.getState().activeId).not.toBeNull()
+    const again = store.getState().activeId
+    await userEvent.keyboard('{Meta>}k{/Meta}')
+    // An empty active conversation is reused rather than piling up blanks.
+    expect(store.getState().activeId).toBe(again)
   })
 })

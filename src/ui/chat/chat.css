@@ -914,3 +914,32 @@
     transform: translate(-50%, calc(-100% - 2px)) scale(0.97);
   }
 }
+
+/* Jump to latest: floats above the composer when the reader has scrolled up. */
+.chat__jump {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin: 0 auto 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--dock-shadow);
+  color: var(--ink);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chat__jump:hover {
+  border-color: var(--accent);
+}
+.chat__jump-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: chat-pulse 1.4s var(--ease) infinite;
+}

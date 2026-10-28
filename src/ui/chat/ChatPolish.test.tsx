@@ -136,3 +136,39 @@ describe('busy composer, Stop and live progress', () => {
     expect(screen.queryByText('Ask a question to see its evidence.')).toBeNull()
   })
 })
+
+describe('jump to latest and shortcuts', () => {
+  it('a Jump to latest pill appears after scrolling up, and takes the reader back down', async () => {
+    const { container } = mount(fixedClient('An answer.'))
+    await ask('Who owns Meridian?')
+    const scroller = container.querySelector<HTMLElement>('.chat__scroll')!
+    Object.defineProperty(scroller, 'scrollHeight', { configurable: true, value: 2000 })
+    Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 500 })
+    scroller.scrollTo = vi.fn()
+    expect(screen.queryByRole('button', { name: /Jump to latest/ })).toBeNull()
+    scroller.scrollTop = 300
+    fireEvent.scroll(scroller)
+    await setup().click(screen.getByRole('button', { name: /Jump to latest/ }))
+    expect(scroller.scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 2000 }))
+  })
+
+  it('/ focuses the question box unless you are already typing somewhere', async () => {
+    mount()
+    const user = setup()
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    await user.keyboard('/')
+    expect(box()).toHaveFocus()
+    expect(box()).toHaveValue('')
+    await user.keyboard('/')
+    expect(box()).toHaveValue('/')
+  })
+
+  it('Esc anywhere stops a streaming answer', async () => {
+    const signals: AbortSignal[] = []
+    mount(hangingClient([{ type: 'token', text: 'x' }], signals))
+    await ask('Who owns Meridian?')
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(signals[0].aborted).toBe(true)
+  })
+})

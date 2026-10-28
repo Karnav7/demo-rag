@@ -63,6 +63,11 @@ export function Guide() {
           <li><strong>Context</strong>: on lets "who else shares that address?" refer to the previous answer. The resolved question is shown on the answer.</li>
           <li><strong>LLM</strong>: off gives the extractive answer, a plain list of the facts found.</li>
         </ul>
+        <p>
+          While an answer is on its way, a slow light circles the composer, each retrieval stage ticks by above the
+          answer, and Send becomes <strong>Stop</strong>. Stopping keeps what arrived and marks it <em>Stopped</em>.
+          If you scroll up mid-answer, <strong>Jump to latest</strong> brings you back down.
+        </p>
       </Sec>
 
       <Sec id="messages" title="Message actions">
@@ -73,7 +78,12 @@ export function Guide() {
           <li><strong>Regenerate</strong> re-runs the question with the current settings.</li>
           <li><strong>Good answer / Poor answer</strong> mark it for yourself; the mark is saved with the conversation.</li>
         </ul>
-        <p>Suggested follow-ups appear beneath the answer, and a grounding-confidence badge summarises how well-supported it is.</p>
+        <p>
+          Suggested follow-ups appear beneath the answer, and a grounding-confidence badge summarises how well-supported it is.
+          Colour carries meaning: confidence runs from amber (weak) to periwinkle (strong) on the badge, the citation chips, the
+          Facts table and the graph's used edges; sanctions entries and alerts glow on a red risk scale; Trace bars run cool to warm
+          by how long each stage took. Hover or focus a citation chip to preview the passage it points to.
+        </p>
       </Sec>
 
       <Sec id="evidence" title="Evidence tabs">
@@ -139,7 +149,10 @@ export function Guide() {
         <dl className="keys">
           <dt><kbd>Enter</kbd></dt><dd>Send the question.</dd>
           <dt><kbd>Shift</kbd> + <kbd>Enter</kbd></dt><dd>New line in the question.</dd>
-          <dt><kbd>Esc</kbd></dt><dd>Close an open menu, popover or drawer, or cancel a rename, and return focus where it was.</dd>
+          <dt><kbd>/</kbd></dt><dd>Jump to the question box from anywhere in the chat.</dd>
+          <dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>K</kbd></dt><dd>Start a new conversation, from any page.</dd>
+          <dt><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>.</kbd></dt><dd>Open or close the evidence drawer on narrow screens; on wide screens, move focus to the evidence tabs.</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Stop an answer that is still arriving (the partial text is kept and marked <em>Stopped</em>). Otherwise close an open menu, popover or drawer, or cancel a rename, and return focus where it was.</dd>
           <dt><kbd>←</kbd> <kbd>→</kbd> <kbd>Home</kbd> <kbd>End</kbd></dt><dd>Move between evidence tabs and between graph views.</dd>
           <dt>Scroll on a graph</dt><dd>Zoom in and out; drag the background to pan.</dd>
           <dt>Drag a node in Force</dt><dd>Reposition it and pin it there; the rest of the graph reacts. Double-click a pinned node to release it.</dd>
