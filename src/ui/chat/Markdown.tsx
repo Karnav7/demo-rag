@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
+import { loadWorld } from '../../data/load'
 
 interface Props {
   text: string
@@ -11,8 +12,21 @@ interface Props {
 
 const CITE = /\[(\d+)\]/g
 
-/** Swaps known `[n]` markers in text nodes (outside code) for citation buttons. */
-function linkCitations(html: string, known: Set<number> | null): string {
+/** Hover text for a citation: "[2] Section title, Document title". */
+function citeTitles(citations: { n: number; section_id: string }[]): Map<number, string> {
+  const w = loadWorld()
+  const docs = new Map(w.documents.map((d) => [d.id, d.title]))
+  return new Map(
+    citations.map((c) => {
+      const s = w.sectionById.get(c.section_id)
+      const doc = s && docs.get(s.document_id)
+      return [c.n, s ? `[${c.n}] ${s.title}${doc ? `, ${doc}` : ''}` : `Source ${c.n}`]
+    }),
+  )
+}
+
+/** Swaps known `[n]` markers in text nodes (outside code) for citation buttons; `known` maps n to its hover text. */
+function linkCitations(html: string, known: Map<number, string> | null): string {
   const tpl = document.createElement('template')
   tpl.innerHTML = html
   const walker = document.createTreeWalker(tpl.content, NodeFilter.SHOW_TEXT)
@@ -32,6 +46,8 @@ function linkCitations(html: string, known: Set<number> | null): string {
       b.className = 'cite'
       b.dataset.n = String(n)
       b.setAttribute('aria-label', `Source ${n}`)
+      const title = known?.get(n)
+      if (title) b.title = title
       b.textContent = String(n)
       frag.append(b)
       last = m.index + m[0].length
@@ -47,7 +63,7 @@ export function Markdown({ text, citations, onCite }: Props) {
   const html = useMemo(() => {
     const raw = marked.parse(text, { async: false, gfm: true, breaks: false })
     const clean = DOMPurify.sanitize(raw)
-    return linkCitations(clean, citations ? new Set(citations.map((c) => c.n)) : null)
+    return linkCitations(clean, citations ? citeTitles(citations) : null)
   }, [text, citations])
 
   const onClick = (e: React.MouseEvent) => {

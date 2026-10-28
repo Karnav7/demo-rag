@@ -8,6 +8,8 @@ import type { ChatClient } from '../../client/chatClient'
 import type { ChatResponse } from '../../domain/types'
 import { MERIDIAN_NAME, UBO_NAME } from '../../data/scenarios'
 import { ChatView } from './ChatView'
+import { Markdown } from './Markdown'
+import { loadWorld } from '../../data/load'
 
 // shouldAdvanceTime: RTL's async wrapper waits on a real setTimeout(0) that a frozen clock never fires.
 beforeEach(() => { vi.useFakeTimers({ shouldAdvanceTime: true }) })
@@ -173,6 +175,16 @@ describe('Chat', () => {
     expect(screen.getByText('Hybrid retrieval · reading snapshot…')).toBeInTheDocument()
     await settle()
     expect(screen.queryByText('Hybrid retrieval · reading snapshot…')).not.toBeInTheDocument()
+  })
+
+  it('a citation shows its section and document on hover', () => {
+    const w = loadWorld()
+    const sec = w.sections[0]
+    const doc = w.documents.find((d) => d.id === sec.document_id)!
+    const { container } = render(<Markdown text="Owned by Alpha [1]." citations={[{ n: 1, section_id: sec.id }]} />)
+    const cite = container.querySelector<HTMLButtonElement>('button.cite[data-n="1"]')!
+    expect(cite).toHaveAttribute('title', `[1] ${sec.title}, ${doc.title}`)
+    expect(cite).toHaveAccessibleName('Source 1')
   })
 
   it('clicking a cite selects the message and highlights its section', async () => {
