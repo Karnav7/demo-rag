@@ -123,8 +123,31 @@ const ownership: Writer<'ownership'> = (w, m, c) => {
   const lead = focal.id !== subject.id ? `Account ${focal.name} is held by ${subject.name}${c.rel(m.holderRel)}. ` : ''
   let leadUsed = false
   const withLead = (s: string) => {
+    const out = leadUsed ? s : `${lead}${s}`
     leadUsed = true
-    return `${lead}${s}`
+    return out
+  }
+
+  // "Who are the directors of X?": directors and controllers first, ownership after.
+  const directorNames = () => m.directors.map((r) => `${w.byId.get(r.from)!.name}${r.props.role ? ` (${r.props.role})` : ''}${c.rel(r)}`)
+  const directorshipNames = () => m.directorships.map((r) => `${w.byId.get(r.to)!.name}${r.props.role && r.props.role !== 'director' ? ` (${r.props.role})` : ''}${c.rel(r)}`)
+  const controlFirst = m.controlFirst && (m.directors.length || m.directorships.length || m.control.length)
+  if (controlFirst) {
+    if (m.directors.length) lines.push(withLead(`${b(`${subject.name} has ${count(m.directors.length, 'director')}`)}: ${joinList(directorNames())}.`))
+    else if (m.directorships.length) lines.push(withLead(`${b(`${subject.name} is a director of ${count(m.directorships.length, 'company', 'companies')}`)}: ${joinList(directorshipNames())}.`))
+    else lines.push(withLead(`${b(`No directors of ${subject.name} are recorded in the graph`)}.`))
+  }
+  if (controlFirst && m.directors.length && m.directorships.length) lines.push('', `${subject.name} is a director of ${joinList(directorshipNames())}.`)
+  const controlLines = () => {
+    const control = m.control.map((r) => {
+      const notes = [r.props.basis && `basis: ${r.props.basis}`, r.confidence < 0.8 && `extraction confidence ${r.confidence}`].filter(Boolean)
+      return `${w.byId.get(r.from)!.name} controls ${w.byId.get(r.to)!.name}${notes.length ? ` (${notes.join('; ')})` : ''}${c.rel(r)}`
+    })
+    if (control.length) lines.push('', `Control: ${joinList(control)}.`)
+  }
+  if (controlFirst) {
+    controlLines()
+    lines.push('')
   }
 
   if (m.owners.length) {
@@ -172,18 +195,10 @@ const ownership: Writer<'ownership'> = (w, m, c) => {
     }
   }
 
-  const control = m.control.map((r) => {
-    const notes = [r.props.basis && `basis: ${r.props.basis}`, r.confidence < 0.8 && `extraction confidence ${r.confidence}`].filter(Boolean)
-    return `${w.byId.get(r.from)!.name} controls ${w.byId.get(r.to)!.name}${notes.length ? ` (${notes.join('; ')})` : ''}${c.rel(r)}`
-  })
-  if (control.length) lines.push('', `Control: ${joinList(control)}.`)
-  if (m.directors.length) {
-    const ds = m.directors.map((r) => `${w.byId.get(r.from)!.name}${r.props.role ? ` (${r.props.role})` : ''}${c.rel(r)}`)
-    lines.push('', `${m.directors.length === 1 ? 'Director' : 'Directors'} of ${subject.name}: ${joinList(ds)}.`)
-  }
-  if (m.directorships.length) {
-    const ds = m.directorships.map((r) => `${w.byId.get(r.to)!.name}${r.props.role && r.props.role !== 'director' ? ` (${r.props.role})` : ''}${c.rel(r)}`)
-    lines.push('', `${subject.name} is a director of ${joinList(ds)}.`)
+  if (!controlFirst) {
+    controlLines()
+    if (m.directors.length) lines.push('', `${m.directors.length === 1 ? 'Director' : 'Directors'} of ${subject.name}: ${joinList(directorNames())}.`)
+    if (m.directorships.length) lines.push('', `${subject.name} is a director of ${joinList(directorshipNames())}.`)
   }
   if (lead && !leadUsed) {
     lines.unshift(lead.trim())

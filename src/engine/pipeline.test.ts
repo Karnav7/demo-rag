@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { loadWorld } from '../data/load'
 import * as S from '../data/scenarios'
-import { ALERTED_TXN, BENIGN_LOOKALIKES, COLLECTOR, FRONT_COMPANY, FRONT_DIRECTOR, MERIDIAN, UBO } from '../data/scenarios'
+import { ALERTED_TXN, BENIGN_LOOKALIKES, COLLECTOR, COLLECTOR_HOLDER, FRONT_COMPANY, FRONT_DIRECTOR, MERIDIAN, UBO } from '../data/scenarios'
 import type { ChatRequest, ChatResponse, Mode, Settings } from '../domain/types'
 import { resolveContext } from './context'
 import { classify } from './intents'
@@ -102,6 +102,26 @@ describe('runPipeline', () => {
     const { response: r } = ask(starterQuestions(w)[2], { mode })
     expect(r.subgraph.nodes.find((n) => n.id === ALERTED_TXN)?.seed).toBe(true)
     for (const x of (w.in.get(ALERTED_TXN) ?? []).filter((x) => x.type === 'FLAGS')) expect(r.answer).toContain(String(w.byId.get(x.from)!.props.rule))
+  })
+
+  it.each([
+    [`Who are the directors of ${name(COLLECTOR_HOLDER)}?`, COLLECTOR_HOLDER],
+    [`Who are the directors of ${S.FRONT_COMPANY_NAME}?`, FRONT_COMPANY],
+    [`Who runs ${S.FRONT_COMPANY_NAME}?`, FRONT_COMPANY],
+  ])('directors question leads with the directors, cited, ownership after: %s', (q, id) => {
+    const { response: r } = ask(q)
+    const directors = (w.in.get(id) ?? []).filter((x) => x.type === 'DIRECTOR_OF').map((x) => w.byId.get(x.from)!.name)
+    expect(directors.length).toBeGreaterThan(0)
+    const first = r.answer.split('\n')[0]
+    expect(first).toMatch(/director/i)
+    expect(first).not.toMatch(/owned by/i)
+    for (const d of directors) expect(first).toContain(d)
+    expect(first).toMatch(/\[\d+\]/)
+    expect(r.answer).toMatch(/owned by|ownership chain|No shareholders/)
+  })
+
+  it('an ownership question still leads with ownership', () => {
+    expect(ask(`Who ultimately owns ${S.MERIDIAN_NAME}?`).response.answer.split('\n')[0]).toMatch(/ultimately owned by/)
   })
 
   it.each(MODES.flatMap((mode) => [...starterQuestions(w), `Is ${S.FRONT_COMPANY_NAME} connected to a sanctioned party?`].map((q) => [mode, q] as const)))(

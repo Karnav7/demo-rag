@@ -11,9 +11,14 @@ const RULES: [Intent, RegExp][] = [
   ['flagged', /\b(?:flag(?:s|ged)?|alert(?:s|ed)?|trigger(?:s|ed)?)\b/i],
   ['regulation', /\b(?:regulations?|regulat\w*|laws?|legal|rules?|requires?|required|requirements?|reporting|obligations?|comply|compliance|amld|mlrs?|cdd|bsa|poca)\b/i],
   ['shared', /\b(?:shares?|sharing|shared|same (?:address|device|director|phone)|in common|who else|co-located)\b/i],
-  ['ownership', /\b(?:own(?:s|ed|er|ers|ership)?|ubo|beneficial|control(?:s|led|ler|lers)?|directors?|shareholders?|behind|parent)\b/i],
+  ['ownership', /\b(?:own(?:s|ed|er|ers|ership)?|ubo|beneficial|control(?:s|led|ler|lers)?|directors?|officers?|management|who runs|shareholders?|behind|parent)\b/i],
   ['trail', /\b(?:trail|flows?|transactions?|payments?|transfers?|wires?|sent|received|funds|money|deposits?|counterpart(?:y|ies)|paid)\b/i],
 ]
+
+/** Control wording without ownership wording: the ownership answer leads with directors and controllers. */
+const CONTROL_WORDS = /\b(?:directors?|directorships?|officers?|management|board|who runs|control(?:s|led|ler|lers)?)\b/i
+const OWNERSHIP_WORDS = /\b(?:own(?:s|ed|er|ers|ership)?|ubo|beneficial|shareholders?|parent)\b/i
+export const asksControl = (q: string) => CONTROL_WORDS.test(q) && !OWNERSHIP_WORDS.test(q)
 
 export function classify(q: string): Intent {
   for (const [intent, re] of RULES) if (re.test(q)) return intent
@@ -80,7 +85,7 @@ export interface FlaggedItem { target: GNode; alerts: { alert: GNode; rel: GRel 
 export interface RegulationItem { jur: GNode; via?: GRel; regs: { reg: GNode; rel: GRel; section: string | null; score: number }[] }
 
 export type Match =
-  | { intent: 'ownership'; focal: GNode; subject: GNode; holderRel?: GRel; owners: Chain[]; holdings: Holding[]; control: GRel[]; directors: GRel[]; directorships: GRel[]; rels: GRel[] }
+  | { intent: 'ownership'; focal: GNode; subject: GNode; holderRel?: GRel; controlFirst: boolean; owners: Chain[]; holdings: Holding[]; control: GRel[]; directors: GRel[]; directorships: GRel[]; rels: GRel[] }
   | { intent: 'shared'; focal: GNode; groups: SharedGroup[]; rels: GRel[] }
   | { intent: 'sanctions'; focal: GNode; hits: SanctionsHit[]; cleared: GRel[]; ties: GRel[]; checked: number; hops: number; rels: GRel[] }
   | { intent: 'trail'; focal: GNode; accounts: GNode[]; holders: Map<string, GRel>; items: TrailItem[]; rels: GRel[] }
@@ -117,7 +122,7 @@ function partyRels(p?: Party): (GRel | undefined)[] {
 
 const MAX_CHAIN = 6
 
-function ownership(w: WorldIndex, focal: GNode): Match {
+function ownership(w: WorldIndex, focal: GNode, controlFirst: boolean): Match {
   let subject = focal
   let holderRel: GRel | undefined
   if (focal.label === 'Account') {
@@ -159,7 +164,7 @@ function ownership(w: WorldIndex, focal: GNode): Match {
   const directors = ins(w, subject.id, 'DIRECTOR_OF')
   const directorships = subject.label === 'Person' ? outs(w, subject.id, 'DIRECTOR_OF') : []
   const rels = uniqRels([holderRel, ...owners.flatMap((o) => o.paths.flat()), ...holdings.flatMap((h) => h.path), ...control, ...directors, ...directorships])
-  return { intent: 'ownership', focal, subject, holderRel, owners, holdings, control, directors, directorships, rels }
+  return { intent: 'ownership', focal, subject, holderRel, controlFirst, owners, holdings, control, directors, directorships, rels }
 }
 
 export function pctOf(r: GRel): number {
@@ -377,7 +382,7 @@ function regulation(w: WorldIndex, focal: GNode, question: string, named: string
 
 export function matchIntent(w: WorldIndex, intent: Intent, focal: GNode, exp: Expansion, question: string, named: string[] | null): Match {
   switch (intent) {
-    case 'ownership': return ownership(w, focal)
+    case 'ownership': return ownership(w, focal, asksControl(question))
     case 'shared': return shared(w, focal)
     case 'sanctions': return sanctions(w, focal, exp, INTENTS.sanctions.hops!)
     case 'trail': return trail(w, focal)
