@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { createStore, type AppStore } from '../../store/store'
 import { StoreProvider } from '../../store/StoreProvider'
 import { Sidebar } from './Sidebar'
+import { loadWorld } from '../../data/load'
 
 const DAY = 86_400_000
 
@@ -35,6 +36,15 @@ const three = [
 ]
 
 describe('Sidebar', () => {
+  it('the Architecture link tells the size of the graph on hover', () => {
+    setup([])
+    const w = loadWorld()
+    expect(screen.getByRole('link', { name: 'Architecture' })).toHaveAttribute(
+      'title',
+      `${w.nodes.length} nodes · ${w.rels.length} relationships`,
+    )
+  })
+
   it('search filters list', async () => {
     setup(three)
     expect(screen.getAllByRole('listitem')).toHaveLength(3)

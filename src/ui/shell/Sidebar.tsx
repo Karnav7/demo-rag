@@ -4,6 +4,13 @@ import { BookOpen, Network, Plus, Search } from 'lucide-react'
 import { useAppStore } from '../../store/StoreProvider'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { ConversationItem } from './ConversationItem'
+import { loadWorld } from '../../data/load'
+
+/** "214 nodes · 431 relationships": the size of the graph the app answers from. */
+function graphSize(): string {
+  const w = loadWorld()
+  return `${w.nodes.length} nodes · ${w.rels.length} relationships`
+}
 
 export function Sidebar({ onNavigate, narrow = false, open = false }: { onNavigate?: () => void; narrow?: boolean; open?: boolean }) {
   const s = useAppStore()
@@ -95,7 +102,7 @@ export function Sidebar({ onNavigate, narrow = false, open = false }: { onNaviga
             Guide<small>Every feature explained</small>
           </span>
         </NavLink>
-        <NavLink to="/architecture" className="sb__link" onClick={onNavigate}>
+        <NavLink to="/architecture" className="sb__link" onClick={onNavigate} title={graphSize()}>
           <Network size={15} aria-hidden />
           <span>Architecture</span>
         </NavLink>
