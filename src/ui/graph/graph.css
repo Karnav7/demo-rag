@@ -98,6 +98,11 @@
   stroke-opacity: 0.6;
   stroke-width: 1;
 }
+/* Radial: the graph's relationships across the tree, dashed so they read apart from the tree's own spokes. */
+.g-edge--cross {
+  stroke-dasharray: 3 3;
+  animation: none;
+}
 
 /* Nodes: outer <g> positions, .g-pop pops in, .g-drift drifts (dark only). */
 .g-node {

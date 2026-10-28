@@ -93,7 +93,7 @@ export function Guide() {
           <dt>Force</dt>
           <dd>A physics layout where connected nodes pull together. Drag a node to pin it where you drop it, double-click to release it; click a node to open its source.</dd>
           <dt>Radial</dt>
-          <dd>A tree fanned out from the centre, grouped by jurisdiction and then by node type, which makes it easy to see where the entities sit.</dd>
+          <dd>A tree fanned out from the centre, grouped by jurisdiction and then by node type, which makes it easy to see where the entities sit. Dashed curves across the tree are the relationships between them.</dd>
           <dt>Orbit</dt>
           <dd>Nodes placed on a sphere with depth cues. Drag to turn it, which helps separate chains that overlap in the flat views.</dd>
           <dt>3D</dt>

@@ -57,6 +57,16 @@ export function Radial({ subgraph, dim, onNodeOpen }: GraphViewProps) {
   const used = (d: HierarchyPointNode<Datum>) => d.data.node?.used || d.leaves().some((l) => l.data.node?.used)
   const pt = (d: HierarchyPointNode<Datum>) => (d.depth ? polar(d.x, d.y) : { x: W / 2, y: H / 2 })
   const links = root.links()
+  // The graph's own relationships, drawn across the tree as dashed curves bowed toward the centre.
+  const at = new Map(root.descendants().flatMap((d) => (d.data.node ? [[d.data.node.id, pt(d)] as const] : [])))
+  const name = new Map(subgraph.nodes.map((n) => [n.id, n.name]))
+  const cross = subgraph.edges.flatMap((e) => {
+    const a = at.get(e.from)
+    const b = at.get(e.to)
+    if (!a || !b) return []
+    const c = { x: W / 2 + ((a.x + b.x) / 2 - W / 2) * 0.35, y: H / 2 + ((a.y + b.y) / 2 - H / 2) * 0.35 }
+    return [{ e, d: `M${a.x},${a.y} Q${c.x},${c.y} ${b.x},${b.y}` }]
+  })
   let order = 0
 
   return (
@@ -79,6 +89,16 @@ export function Radial({ subgraph, dim, onNodeOpen }: GraphViewProps) {
               />
             )
           })}
+          {cross.map(({ e, d }) => (
+            <path
+              key={e.id}
+              className={`g-edge g-edge--cross${e.used ? ' is-used' : ''}`}
+              d={d}
+              style={{ opacity: dimmed(dim, e.used) }}
+            >
+              <title>{`${name.get(e.from)} ${e.type.replace(/_/g, ' ').toLowerCase()} ${name.get(e.to)}`}</title>
+            </path>
+          ))}
         </g>
         <g className="g-nodes">
           {root.descendants().map((d) => {

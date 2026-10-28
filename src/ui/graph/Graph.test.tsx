@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Subgraph, TraceStage } from '../../domain/types'
@@ -166,6 +166,15 @@ describe('Graph views', () => {
     expect(uk.children!.map((l) => l.name)).toEqual(['Person', 'Company'])
     expect(uk.children!.map((l) => l.children!.map((e) => e.node?.id))).toEqual([['p'], ['c']])
     expect(root.children![1].children!.map((l) => [l.name, l.children!.map((e) => e.name)])).toEqual([['Account', ['Acct 0042']]])
+  })
+
+  it('radial draws the subgraph relationships as dashed cross-links over the tree', async () => {
+    const { container } = render(<GraphViews subgraph={subgraph} trace={trace} onNodeOpen={() => {}} />)
+    await userEvent.setup().click(screen.getByRole('radio', { name: 'Radial' }))
+    await waitFor(() => expect(container.querySelector('.g-radial')).not.toBeNull())
+    const cross = [...container.querySelectorAll('.g-radial path.g-edge--cross')]
+    expect(cross.map((p) => p.querySelector('title')?.textContent)).toEqual(['Ada Vance owns Meridian Ltd', 'Meridian Ltd owns Acct 0042'])
+    expect(cross.map((p) => p.classList.contains('is-used'))).toEqual([true, false])
   })
 
   it('replay plays one step per 700 ms; pause stops; restart returns to the start', () => {
