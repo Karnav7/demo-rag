@@ -42,6 +42,11 @@ export function EvidencePanel({
   if (!response) return <p className="evidence__empty">Ask a question to see its evidence.</p>
 
   const idx = TABS.findIndex((t) => t.id === tab)
+  const counts: Partial<Record<EvidenceTab, number>> = {
+    graph: response.subgraph.nodes.length,
+    facts: response.facts.length,
+    sources: response.sources.length,
+  }
   const onKey = (e: React.KeyboardEvent) => {
     const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
     const to = e.key === 'Home' ? 0 : e.key === 'End' ? TABS.length - 1 : step ? (idx + step + TABS.length) % TABS.length : -1
@@ -73,6 +78,11 @@ export function EvidencePanel({
                 onClick={() => onTab(t.id)}
               >
                 {t.label}
+                {counts[t.id] !== undefined && (
+                  <span className="ev__count" aria-hidden>
+                    {counts[t.id]}
+                  </span>
+                )}
                 {on && <motion.span layoutId="ev-ink" className="ev__ink" transition={ink} />}
               </button>
             )

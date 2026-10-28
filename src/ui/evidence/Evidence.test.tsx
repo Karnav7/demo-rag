@@ -122,6 +122,26 @@ describe('Evidence', () => {
     expect(btn).toHaveTextContent('Copied')
   })
 
+  it('tabs show how many nodes, facts and sources the answer has, without changing tab names', () => {
+    const r = response({
+      subgraph: {
+        nodes: [
+          { id: 'n1', label: 'Company', name: 'Alpha Ltd', props: {}, used: true, seed: true },
+          { id: 'n2', label: 'Company', name: 'Beta LLC', props: {}, used: false, seed: false },
+          { id: 'n3', label: 'Person', name: 'Cara', props: {}, used: false, seed: false },
+        ],
+        edges: [],
+      },
+    })
+    render(<Harness r={r} />)
+    const count = (name: string) => screen.getByRole('tab', { name }).querySelector('.ev__count')?.textContent
+    expect(count('Subgraph')).toBe('3')
+    expect(count('Facts')).toBe('2')
+    expect(count('Sources')).toBe('2')
+    expect(count('Cypher')).toBeUndefined()
+    expect(count('Trace')).toBeUndefined()
+  })
+
   it('marks the highlighted source section', () => {
     render(<Harness r={response()} initial="sources" highlight="sec-2" />)
     const cur = document.querySelectorAll('[aria-current="true"]')

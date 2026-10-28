@@ -43,6 +43,12 @@
 .ev__tab[aria-selected='true'] {
   color: var(--ink);
 }
+.ev__count {
+  margin-left: 4px;
+  color: var(--mute);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
 .ev__ink {
   position: absolute;
   left: 0;
