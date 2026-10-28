@@ -54,8 +54,9 @@
 }
 
 .g__stage {
-  flex: 1;
-  min-height: 260px;
+  /* About 60% of the evidence column's height; legend and controls sit beneath it. */
+  flex: none;
+  height: clamp(260px, 60vh, 900px);
   display: flex;
   flex-direction: column;
   position: relative;

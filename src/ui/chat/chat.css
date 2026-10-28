@@ -62,10 +62,9 @@
     box-shadow 0.25s var(--ease);
 }
 .chat__head.is-scrolled {
-  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 84%, transparent);
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 52%, transparent);
   border-bottom-color: var(--line);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(160%);
   box-shadow: 0 6px 20px -14px rgba(0, 0, 0, 0.35);
 }
 .chat__title {
@@ -503,8 +502,8 @@
   background: linear-gradient(
     to bottom,
     transparent,
-    color-mix(in srgb, var(--bg) 70%, transparent) 45%,
-    color-mix(in srgb, var(--bg) 92%, transparent)
+    color-mix(in srgb, var(--bg) 30%, transparent) 50%,
+    color-mix(in srgb, var(--bg) 62%, transparent)
   );
   pointer-events: none;
 }
@@ -519,9 +518,8 @@
   position: relative;
   border: 1px solid var(--line);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 78%, transparent);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 50%, transparent);
+  backdrop-filter: blur(22px) saturate(160%);
   box-shadow: var(--dock-shadow);
   transition:
     box-shadow 0.35s var(--ease),
@@ -741,7 +739,7 @@
 /* Evidence column (tabs and drawer: ../evidence/evidence.css) */
 .evidence {
   flex: none;
-  width: clamp(360px, 40%, 600px);
+  width: clamp(440px, 50%, 820px);
   box-sizing: border-box;
   border-left: 1px solid var(--line);
   background: var(--side);
@@ -887,7 +885,6 @@
   border-radius: 12px;
   background: color-mix(in srgb, var(--panel-solid, var(--bg)) 86%, transparent);
   backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
   box-shadow: var(--shadow-pop);
   font-size: 12.5px;
   line-height: 1.45;
@@ -929,7 +926,6 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--panel-solid, var(--bg)) 82%, transparent);
   backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   box-shadow: var(--dock-shadow);
   color: var(--ink);
   font-size: 12.5px;
