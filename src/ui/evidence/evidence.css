@@ -572,7 +572,7 @@
   }
 }
 
-/* ───────── Evidence tab bar: five candidate styles (temporary picker; one will be kept) ───────── */
+/* ───────── Evidence tab bar: five layouts the reader chooses between (Tab style picker) ───────── */
 .ev__frame,
 .ev__main {
   flex: 1;

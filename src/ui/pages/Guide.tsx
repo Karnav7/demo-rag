@@ -95,6 +95,12 @@ export function Guide() {
           <li><strong>Trace</strong>: how long each stage took.</li>
         </ul>
         <p>The help icon in the evidence header explains the current tab in a sentence.</p>
+              <p>
+          <strong>Tab style</strong>, at the top of the panel, changes how the tabs are laid out: <em>Line</em> (underlined
+          tabs with counts), <em>Segmented</em> (one pill control), <em>Stat cards</em> (each tab leads with its number),
+          <em>Icon rail</em> (a vertical strip of icons, leaving the content full width) or <em>Bottom dock</em> (a floating
+          bar at the foot of the panel). Your choice is remembered in this browser.
+        </p>
       </Sec>
 
       <Sec id="graph-views" title="Graph views">

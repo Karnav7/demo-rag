@@ -186,10 +186,10 @@ export function EvidencePanel({
   )
 }
 
-/** Temporary: switch the tab bar between the candidate designs to choose one. */
+/** The reader's choice of tab bar layout (remembered in this browser). */
 function TabStylePicker({ style, onStyle }: { style: TabStyle; onStyle(s: TabStyle): void }) {
   return (
-    <div className="tsp" role="radiogroup" aria-label="Tab style (preview)">
+    <div className="tsp" role="radiogroup" aria-label="Tab style">
       <span className="tsp__label" aria-hidden>Tab style</span>
       {TAB_STYLES.map((s) => (
         <button

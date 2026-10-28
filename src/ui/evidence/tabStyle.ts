@@ -1,13 +1,10 @@
 import { useCallback, useState } from 'react'
 
-/**
- * Temporary: candidate designs for the evidence tab bar, switchable live so one can be chosen.
- * Once a style is picked, the others (and the picker) are removed.
- */
+/** The evidence tab bar's layout, chosen by the reader in the panel and remembered in this browser. */
 export type TabStyle = 'line' | 'segmented' | 'cards' | 'rail' | 'dock'
 
 export const TAB_STYLES: { id: TabStyle; label: string; hint: string }[] = [
-  { id: 'line', label: 'Line', hint: 'Icons and counts with a sliding underline (refined current)' },
+  { id: 'line', label: 'Line', hint: 'Icons and counts with a sliding underline' },
   { id: 'segmented', label: 'Segmented', hint: 'A pill control; the selection slides as a filled capsule' },
   { id: 'cards', label: 'Stat cards', hint: 'Each tab is a small card leading with its number' },
   { id: 'rail', label: 'Icon rail', hint: 'A vertical icon strip on the left; content gets the full width' },

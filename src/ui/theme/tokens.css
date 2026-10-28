@@ -31,6 +31,8 @@
   --risk-glow: rgba(184, 48, 44, 0.35);
   --heat-cool: #5f8b8f;
   --heat-warm: #c08a2e;
+  --scroll-thumb: rgba(43, 41, 37, 0.18);
+  --scroll-thumb-hover: rgba(181, 82, 45, 0.55);
   --node-Person: #5f7a99;
   --node-Company: #8a7550;
   --node-Account: #5e8a6e;
@@ -79,6 +81,8 @@
   --risk-glow: rgba(255, 92, 114, 0.55);
   --heat-cool: #6cc6ff;
   --heat-warm: #ffb36b;
+  --scroll-thumb: rgba(230, 232, 242, 0.16);
+  --scroll-thumb-hover: rgba(154, 166, 255, 0.6);
   --node-Person: #8ec0ff;
   --node-Company: #f2c879;
   --node-Account: #7fe0a8;
@@ -151,6 +155,42 @@ body,
 .theme-toggle__icon {
   display: inline-grid;
   place-items: center;
+}
+
+/* Scrollbars: slim rounded thumbs on a clear track, no arrow buttons, accent on hover.
+   WebKit/Blink use the pseudo-elements; Firefox (which lacks them) gets the standard properties. Blink would
+   ignore the pseudo-elements if scrollbar-color were set, so the standard ones stay behind the Firefox check. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--scroll-thumb) padding-box;
+  min-height: 36px;
+}
+::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background: var(--scroll-thumb-hover) padding-box;
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--accent) padding-box;
+}
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+  }
 }
 
 /* Press feedback: controls give a little under the pointer (the independent `scale` property leaves hover transforms alone). */
