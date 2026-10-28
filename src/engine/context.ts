@@ -1,6 +1,7 @@
 import type { ChatRequest, GNode } from '../domain/types'
 import { loadWorld, type WorldIndex } from '../data/load'
-import { lexicalSearch } from './lexical'
+import { classify, isIntentWord } from './intents'
+import { lexicalSearch, queryTerms } from './lexical'
 
 export interface Resolution { resolved: string; changed: boolean; detail: string }
 interface Mention { node: GNode; start: number; end: number; text: string }
@@ -33,13 +34,36 @@ function mentions(w: WorldIndex, text: string): Mention[] {
   return found.sort((a, b) => a.start - b.start || b.end - a.end)
 }
 
-/** The entity the conversation is about: the first named in the latest turn that names one (answers lead with their subject). */
+const hasReference = (q: string) => new RegExp(PRONOUN.source, 'i').test(q) || new RegExp(DEMONSTRATIVE.source, 'i').test(q)
+
+/** A question made only of intent wording ("Show the money trail"): it says what to do, not about what. */
+function isFragment(q: string): boolean {
+  const terms = queryTerms(q)
+  return classify(q) !== 'profile' && terms.length > 0 && terms.every(isIntentWord)
+}
+
+/**
+ * The entity the conversation is about. A user turn that names one sets it; a follow-up (pronoun, ellipsis or an
+ * intent-only fragment) keeps it; a question that names nothing takes it from its own answer, which leads with its
+ * subject. Later answers never override the user's subject, so a fallback answer that happens to name other
+ * entities first ("The graph holds no transactions for …") cannot derail the thread.
+ */
 function recentEntity(w: WorldIndex, history: ChatRequest['history']): GNode | null {
-  for (let i = history.length - 1; i >= 0; i--) {
-    const m = mentions(w, history[i].text)[0]
-    if (m) return m.node
+  let subject: GNode | null = null
+  let fromAnswer = true
+  for (const h of history) {
+    if (h.role === 'user') {
+      const named = mentions(w, h.text)[0]
+      if (named) subject = named.node
+      const followUp = hasReference(h.text) || ELLIPSIS.test(h.text) || isFragment(h.text)
+      fromAnswer = !named && !(followUp && subject)
+    } else if (fromAnswer) {
+      const named = mentions(w, h.text)[0]
+      if (named) subject = named.node
+      fromAnswer = false
+    }
   }
-  return null
+  return subject
 }
 
 /** Replaces pronouns and demonstratives in the text with the entity's name. */
@@ -64,8 +88,9 @@ export function resolveContext(question: string, history: ChatRequest['history']
   const q = question.trim()
   const own = mentions(w, q)
   const ellipsis = ELLIPSIS.exec(q)
-  const hasPronoun = !own.length && (new RegExp(PRONOUN.source, 'i').test(q) || new RegExp(DEMONSTRATIVE.source, 'i').test(q))
-  if (!hasPronoun && !ellipsis) return { resolved: q, changed: false, detail: UNCHANGED }
+  const hasPronoun = !own.length && hasReference(q)
+  const fragment = !own.length && !hasPronoun && !ellipsis && history.length > 0 && isFragment(q)
+  if (!hasPronoun && !ellipsis && !fragment) return { resolved: q, changed: false, detail: UNCHANGED }
 
   // "What about Volgamar Seafoods?": ask the previous question again about the newly named entity.
   // Only when the fragment is just the entity; "And who are the directors of X?" already stands alone.
@@ -87,7 +112,16 @@ export function resolveContext(question: string, history: ChatRequest['history']
   }
 
   const entity = recentEntity(w, history)
-  if (!entity) return { resolved: q, changed: false, detail: 'Found a reference to an earlier turn but no named entity to resolve it against.' }
+  if (!entity) {
+    if (fragment) return { resolved: q, changed: false, detail: UNCHANGED }
+    return { resolved: q, changed: false, detail: 'Found a reference to an earlier turn but no named entity to resolve it against.' }
+  }
+
+  // "Show the money trail": the question names only what to do, so apply it to the conversation's subject.
+  if (fragment) {
+    const end = /[?.!]$/.exec(q)?.[0] ?? ''
+    return { resolved: `${q.replace(/[?.!\s]+$/, '')} for ${entity.name}${end}`, changed: true, detail: `Applied the question to ${entity.name} from the earlier turn.` }
+  }
 
   if (hasPronoun) {
     const { text, used } = substitute(q, entity)

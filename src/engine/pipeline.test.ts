@@ -6,6 +6,7 @@ import type { ChatRequest, ChatResponse, Mode, Settings } from '../domain/types'
 import { resolveContext } from './context'
 import { classify } from './intents'
 import { runPipeline } from './pipeline'
+import { starterQuestions } from '../ui/chat/suggestions'
 
 const w = loadWorld()
 const DEFAULTS: Settings = { source: 'offline', mode: 'hybrid', useContext: true, generateAnswer: true }
@@ -78,6 +79,37 @@ describe('runPipeline', () => {
     expect(r.facts).toEqual([])
     expect(r.subgraph.nodes).toEqual([])
     expect(r.confidence).toBe(0)
+  })
+
+  const MODES: Mode[] = ['hybrid', 'lexical', 'vector', 'graph']
+  const NEGATIVES = ['hello', 'Is there any company in Delaware?', 'Tell me about Elon Musk', 'list all persons']
+  it.each(MODES.flatMap((mode) => NEGATIVES.map((q) => [mode, q] as const)))('no entity named (%s): "%s" gets "No matching facts in the graph."', (mode, q) => {
+    const { response: r } = ask(q, { mode })
+    expect(r.answer).toBe('No matching facts in the graph.')
+    expect(r.facts).toEqual([])
+    expect(r.subgraph.nodes).toEqual([])
+    expect(r.confidence).toBe(0)
+  })
+
+  it.each(MODES.flatMap((mode) => starterQuestions(w).map((q) => [mode, q] as const)))('starter chip answers (%s): %s', (mode, q) => {
+    const { response: r } = ask(q, { mode })
+    expect(r.answer).not.toContain('No matching')
+    expect(r.citations.length).toBeGreaterThan(0)
+    expect(r.confidence).toBeGreaterThan(0)
+  })
+
+  it.each(MODES)('the wire chip is about the 14 March wire and its alerts (%s)', (mode) => {
+    const { response: r } = ask(starterQuestions(w)[2], { mode })
+    expect(r.subgraph.nodes.find((n) => n.id === ALERTED_TXN)?.seed).toBe(true)
+    for (const x of (w.in.get(ALERTED_TXN) ?? []).filter((x) => x.type === 'FLAGS')) expect(r.answer).toContain(String(w.byId.get(x.from)!.props.rule))
+  })
+
+  it('confidence folds in how strongly the question matched: a vector-only match scores below the same answer found lexically', () => {
+    const q = starterQuestions(w)[2]
+    const hybrid = ask(q).response
+    const vector = ask(q, { mode: 'vector' }).response
+    expect(vector.confidence).toBeGreaterThan(0)
+    expect(vector.confidence).toBeLessThan(hybrid.confidence)
   })
 
   it('context on: resolves "its" against the previous answer', () => {
@@ -283,6 +315,59 @@ describe('resolveContext', () => {
 
   it('applies ellipsis to the most recent entity when no new one is named', () => {
     expect(resolveContext('And the directors?', history).resolved).toBe('And the directors of Meridian Trade LLC?')
+  })
+
+  it('applies a question that only names what to do ("Show the money trail") to the conversation subject', () => {
+    const r = resolveContext('Show the money trail', history)
+    expect(r.changed).toBe(true)
+    expect(r.resolved).toBe('Show the money trail for Meridian Trade LLC')
+  })
+
+  it('leaves an intent-only question alone at the start of a conversation', () => {
+    expect(resolveContext('Show the money trail', []).changed).toBe(false)
+  })
+
+  it("prefers the previous user turn's subject over other entities the answer names first", () => {
+    const h = [
+      { role: 'user' as const, text: 'Who ultimately owns Meridian Trade LLC?' },
+      { role: 'assistant' as const, text: 'Viktor Halden ultimately owns Meridian Trade LLC.' },
+    ]
+    expect(resolveContext('Who else shares its address?', h).resolved).toBe("Who else shares Meridian Trade LLC's address?")
+  })
+
+  it('keeps the subject through a chain of follow-ups', () => {
+    const h = [
+      ...history,
+      { role: 'user' as const, text: 'Show the money trail' },
+      { role: 'assistant' as const, text: 'The graph holds no transactions for Money Laundering Regulations 2017 (UK MLRs).' },
+    ]
+    expect(resolveContext('Which regulation requires reporting this?', h).resolved).toBe('Which regulation requires reporting Meridian Trade LLC?')
+  })
+})
+
+describe('conversation script: the spec follow-ups after each seeded starter question', () => {
+  const FOLLOW_UPS = ['Who else shares that address?', 'Show the money trail', 'Which regulation requires reporting this?']
+  const starters = starterQuestions(w)
+  it.each([
+    [starters[0], MERIDIAN],
+    [starters[1], FRONT_COMPANY],
+    [`Is ${S.FRONT_COMPANY_NAME} connected to a sanctioned party?`, FRONT_COMPANY],
+    [starters[2], ALERTED_TXN],
+    [starters[3], S.MULE_ACCOUNTS[0]],
+  ])('%s', (first, subject) => {
+    const history: ChatRequest['history'] = []
+    const turn = (q: string) => {
+      const { response } = ask(q, {}, history)
+      history.push({ role: 'user', text: q }, { role: 'assistant', text: response.answer })
+      return response
+    }
+    turn(first)
+    for (const q of FOLLOW_UPS) {
+      const r = turn(q)
+      expect(r.resolvedQuestion, q).toContain(name(subject))
+      expect(r.subgraph.nodes.find((n) => n.id === subject)?.seed, q).toBe(true)
+      expect(r.answer, q).not.toContain('No matching')
+    }
   })
 })
 

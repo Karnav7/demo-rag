@@ -20,6 +20,11 @@ export function classify(q: string): Intent {
   return 'profile'
 }
 
+/** Whether a single word is part of an intent's wording ("money", "trail", "directors"). */
+export function isIntentWord(token: string): boolean {
+  return RULES.some(([, re]) => re.test(token))
+}
+
 export const ALL_TYPES: RelType[] = ['OWNS', 'DIRECTOR_OF', 'CONTROLS', 'HOLDS', 'SENT', 'RECEIVED', 'REGISTERED_AT', 'USED_DEVICE', 'MATCHES', 'INCORPORATED_IN', 'GOVERNED_BY', 'SUBJECT_OF', 'FLAGS']
 
 /**

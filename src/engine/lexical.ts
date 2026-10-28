@@ -6,6 +6,19 @@ const STOPWORDS = new Set(
   'a an and are as at be by did do does for from has have how i in is it its me of on or show tell that the their there these this to was what when where which who whom why with about'.split(' '),
 )
 
+/** Quantifier and listing words: they say how to answer, not what about, so they never match an entity on their own ("list all persons"). */
+const GENERIC = new Set('all any every each list'.split(' '))
+
+/** The question's tokens that can identify an entity. */
+export function queryTerms(q: string): string[] {
+  return [...new Set(tokenize(q).filter((t) => !GENERIC.has(t)))]
+}
+
+/** Tokens of an entity's name and aliases. */
+export function entityTerms(n: GNode): Set<string> {
+  return new Set(tokenize(entityText(n)))
+}
+
 /** Provenance nodes are not entities; neither index returns them. */
 export function isEntity(n: GNode): boolean {
   return n.label !== 'Document' && n.label !== 'Section'
@@ -58,7 +71,7 @@ function build(w: WorldIndex): Index {
 export function lexicalSearch(w: WorldIndex, q: string, k = 12): Hit[] {
   let idx = cache.get(w)
   if (!idx) cache.set(w, (idx = build(w)))
-  const terms = [...new Set(tokenize(q))]
+  const terms = queryTerms(q)
   const N = idx.nodes.length
   const hits: Hit[] = []
   idx.nodes.forEach((n, i) => {

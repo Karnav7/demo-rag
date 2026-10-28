@@ -3,7 +3,7 @@ import type { WorldIndex } from '../data/load'
 import { resolveContext } from './context'
 import { expand, jurisdictionsIn, type Expansion } from './expand'
 import { rrf, type Hit } from './fuse'
-import { lexicalSearch } from './lexical'
+import { entityTerms, lexicalSearch, queryTerms } from './lexical'
 import { rankFacts } from './rank'
 import { vectorSearch } from './vector'
 import { ALL_TYPES, INTENTS, classify, hopsFor, matchIntent, pickFocal, type Intent } from './intents'
@@ -16,7 +16,12 @@ const RRF_K = 60
 const MAX_SEEDS = 3
 const LEX_RELATIVE = 0.5
 const VEC_RELATIVE = 0.8
-const VEC_FLOOR = 0.3
+/** A vector hit that shares a whole name token with the question needs only this cosine… */
+const VEC_FLOOR = 0.15
+/** …one that shares none (sub-word overlap only: "hello" ~ "Bello") needs this much. */
+const VEC_ALONE = 0.6
+/** Cosine at which a vector-only match counts as fully confident. */
+const VEC_CONFIDENT = 0.45
 /** Facts returned beyond the ones the answer cites. */
 const MAX_FACTS = 40
 const FALLBACK_FACTS = 6
@@ -41,14 +46,41 @@ function topHits(w: WorldIndex, hits: Hit[], fmt: (s: number) => string): string
   return hits.slice(0, 3).map((h) => `${w.byId.get(h.id)?.name ?? h.id} (${fmt(h.score)})`).join(', ')
 }
 
-/** Fused hits strong in at least one retriever: lexical within half the best BM25 score, or vector near the best cosine. */
-export function selectSeeds(ranked: Hit[], lexical: Hit[], vector: Hit[]): string[] {
+export interface Seeds {
+  ids: string[]
+  /** How strongly the question matched each seed, 0..1: 1 for a lexical match, scaled cosine for a vector-only one. */
+  strength: Map<string, number>
+}
+
+/**
+ * Fused hits strong in at least one retriever: lexical within half the best BM25 score, or vector near the best
+ * cosine. Trigram cosine alone is noise ("Delaware" ~ "Delacroix"), so a vector-only seed must also share a whole
+ * name or alias token with the question unless its cosine is very high. Seeds naming more of the question go first.
+ */
+export function selectSeeds(w: WorldIndex, question: string, ranked: Hit[], lexical: Hit[], vector: Hit[]): Seeds {
   const lex = new Map(lexical.map((h) => [h.id, h.score]))
   const vec = new Map(vector.map((h) => [h.id, h.score]))
+  const terms = queryTerms(question)
+  const overlap = (id: string) => {
+    const own = entityTerms(w.byId.get(id)!)
+    return terms.filter((t) => own.has(t)).length
+  }
   const lexMin = (lexical[0]?.score ?? 0) * LEX_RELATIVE
-  const vecMin = Math.max(VEC_FLOOR, (vector[0]?.score ?? 0) * VEC_RELATIVE)
-  const strong = (id: string) => (lex.has(id) && lex.get(id)! >= lexMin) || (vec.get(id) ?? 0) >= vecMin
-  return ranked.filter((h) => strong(h.id)).slice(0, MAX_SEEDS).map((h) => h.id)
+  const vecMin = (vector[0]?.score ?? 0) * VEC_RELATIVE
+  const strength = new Map<string, number>()
+  const order = new Map<string, number>()
+  for (const [i, h] of ranked.entries()) {
+    const shared = overlap(h.id)
+    const cos = vec.get(h.id) ?? 0
+    let s = 0
+    if (lex.has(h.id) && lex.get(h.id)! >= lexMin) s = 1
+    else if (cos >= vecMin && cos >= (shared ? VEC_FLOOR : VEC_ALONE)) s = Math.min(1, cos / VEC_CONFIDENT)
+    if (s > 0) (strength.set(h.id, Math.round(s * 100) / 100), order.set(h.id, i))
+  }
+  const ids = [...strength.keys()]
+    .sort((a, b) => overlap(b) - overlap(a) || order.get(a)! - order.get(b)!)
+    .slice(0, MAX_SEEDS)
+  return { ids, strength: new Map(ids.map((id) => [id, strength.get(id)!])) }
 }
 
 /** Hop distance from the nearest seed over the evidence relationships (undirected). */
@@ -114,7 +146,8 @@ export function runPipeline(w: WorldIndex, req: ChatRequest): { stages: TraceSta
   }
 
   // 5. Seeds
-  const seeds = selectSeeds(ranked, lexical, vector)
+  const picked = selectSeeds(w, question, ranked, lexical, vector)
+  const seeds = picked.ids
   const intent: Intent = classify(question)
   const focal = pickFocal(w, intent, seeds)
   const seedNames = seeds.map((id) => `${w.byId.get(id)!.name} (${w.byId.get(id)!.label})`)
@@ -203,7 +236,9 @@ export function runPipeline(w: WorldIndex, req: ChatRequest): { stages: TraceSta
   if (!seeds.length) subgraph.nodes = []
 
   const used = facts.filter((f) => f.used)
-  const confidence = used.length ? Math.round((used.reduce((a, f) => a + f.confidence, 0) / used.length) * 100) / 100 : 0
+  // Grounding confidence: how well the cited facts were extracted, times how strongly the question matched the focal entity.
+  const matchStrength = focal ? picked.strength.get(focal.id) ?? 1 : 0
+  const confidence = used.length ? Math.round((used.reduce((a, f) => a + f.confidence, 0) / used.length) * matchStrength * 100) / 100 : 0
   const citations = c.list()
   const sources: Section[] = citations.map((x) => w.sectionById.get(x.section_id)!).filter(Boolean)
 
