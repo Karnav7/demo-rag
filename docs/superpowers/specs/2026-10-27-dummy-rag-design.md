@@ -3,17 +3,6 @@
 Date: 2026-10-27
 Repo: `~/git-repos/dummy-rag` (new, own history)
 
-## Intent
-
-The user saw **Lattice** (https://aptsalt.github.io/lattice/), a hybrid Graph-RAG chat demo over a Neo4j leave-policy graph, and wants their own version of it. Its features were mapped from the deployed bundle with REA (static analysis of the minified Angular build; the upstream source was deliberately not consulted).
-
-dummy-rag keeps Lattice's features and behaviour, and changes two things:
-
-1. **Look and feel.** The user wants an aesthetic, clean UI with good transitions and a few minimal animations.
-2. **Domain.** Fintech instead of HR leave policy. The use case is a **financial-crime investigation assistant** for AML/KYC analysts: ask questions about ownership chains, money trails and sanctions exposure, and get answers grounded in a graph, with every claim cited.
-
-It is UI-only for now, running on realistic mock data. The user intends to build a real Neo4j-backed backend later, so the mock must sit behind a seam that a real service can replace without touching UI code.
-
 ## Goals
 
 - Feature parity with Lattice (inventory below), re-themed to the fintech domain.
