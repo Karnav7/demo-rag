@@ -49,9 +49,12 @@ export function useDocumentTheme(): string {
   return theme
 }
 
-/** The section a node's evidence comes from: its first used, cited edge, else any cited edge. */
-export function firstCitedSection(g: Subgraph, nodeId: string): string | null {
-  const touching = g.edges.filter((e) => (e.from === nodeId || e.to === nodeId) && e.section_id)
+/**
+ * The passage to open for a node: from its first used edge, else any edge, whose section the answer lists as a
+ * source (`cited`). Null when none of its edges is backed by a listed source.
+ */
+export function firstCitedSection(g: Subgraph, nodeId: string, cited: ReadonlySet<string>): string | null {
+  const touching = g.edges.filter((e) => (e.from === nodeId || e.to === nodeId) && e.section_id && cited.has(e.section_id))
   return (touching.find((e) => e.used) ?? touching[0])?.section_id ?? null
 }
 

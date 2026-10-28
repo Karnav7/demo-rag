@@ -114,9 +114,16 @@ describe('Graph views', () => {
       nodes: subgraph.nodes,
       edges: [edge('x', 'c1', 'a1', false, 'sec-9'), edge('y', 'c1', 'p1', true, 'sec-3'), edge('z', 'a1', 'p1', true, null)],
     }
-    expect(firstCitedSection(g, 'c1')).toBe('sec-3')
-    expect(firstCitedSection(g, 'a1')).toBe('sec-9')
-    expect(firstCitedSection({ nodes: g.nodes, edges: [g.edges[2]] }, 'a1')).toBeNull()
+    const all = new Set(['sec-3', 'sec-9'])
+    expect(firstCitedSection(g, 'c1', all)).toBe('sec-3')
+    expect(firstCitedSection(g, 'a1', all)).toBe('sec-9')
+    expect(firstCitedSection({ nodes: g.nodes, edges: [g.edges[2]] }, 'a1', all)).toBeNull()
+  })
+
+  it('first cited section only returns passages the answer lists as sources', () => {
+    const g: Subgraph = { nodes: subgraph.nodes, edges: [edge('x', 'c1', 'a1', true, 'sec-9'), edge('y', 'c1', 'p1', false, 'sec-3')] }
+    expect(firstCitedSection(g, 'c1', new Set(['sec-3']))).toBe('sec-3')
+    expect(firstCitedSection(g, 'a1', new Set(['sec-3']))).toBeNull()
   })
 
   it('colorFor falls back to a colour when the token is missing', () => {

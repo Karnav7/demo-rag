@@ -215,6 +215,28 @@ describe('Evidence', () => {
     expect(onOpenSection).toHaveBeenCalledTimes(1)
   })
 
+  it('a node whose passages are not among the sources opens nothing and says so', async () => {
+    const onOpenSection = vi.fn()
+    const n = (id: string, name: string) => ({ id, label: 'Company' as const, name, props: {}, used: false, seed: false })
+    const subgraph = {
+      nodes: [n('a', 'Alpha Ltd'), n('b', 'Beta LLC'), n('d', 'Delta Co')],
+      edges: [
+        // sec-7 backs a fact the answer did not cite, so it is not in Sources.
+        { id: 'r7', type: 'OWNS' as const, from: 'd', to: 'a', confidence: 0.9, section_id: 'sec-7', props: {}, used: false },
+        { id: 'r1', type: 'OWNS' as const, from: 'a', to: 'b', confidence: 0.9, section_id: 'sec-1', props: {}, used: true },
+      ],
+    }
+    render(<EvidencePanel response={response({ subgraph })} tab="graph" onTab={() => {}} onOpenSection={onOpenSection} />)
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Delta Co (Company)' }))
+    expect(onOpenSection).not.toHaveBeenCalled()
+    expect(screen.getByRole('status')).toHaveTextContent('No cited passage for Delta Co.')
+    // Alpha Ltd touches both: only the cited passage opens.
+    await user.click(screen.getByRole('button', { name: 'Alpha Ltd (Company)' }))
+    expect(onOpenSection).toHaveBeenCalledWith('sec-1')
+    expect(screen.queryByText(/No cited passage/)).toBeNull()
+  })
+
   it('with no response reads "Ask a question to see its evidence."', () => {
     render(<Harness r={null} />)
     expect(screen.getByText('Ask a question to see its evidence.')).toBeInTheDocument()

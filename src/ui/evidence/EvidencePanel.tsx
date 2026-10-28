@@ -1,4 +1,4 @@
-import { lazy, useRef } from 'react'
+import { lazy, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatResponse } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
@@ -41,6 +41,8 @@ export function EvidencePanel({
 }) {
   const reduced = useReducedMotion()
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
+  /** Feedback for a graph node with no cited passage to open; belongs to the response it was raised on. */
+  const [note, setNote] = useState<{ for: ChatResponse; text: string } | null>(null)
 
   if (!response) return <p className="evidence__empty">Ask a question to see its evidence.</p>
 
@@ -109,11 +111,22 @@ export function EvidencePanel({
                   subgraph={response.subgraph}
                   trace={response.trace}
                   onNodeOpen={(id) => {
-                    const s = firstCitedSection(response.subgraph, id)
-                    if (s) onOpenSection?.(s)
+                    const s = firstCitedSection(response.subgraph, id, new Set(response.sources.map((x) => x.id)))
+                    if (s) {
+                      setNote(null)
+                      onOpenSection?.(s)
+                    } else {
+                      const name = response.subgraph.nodes.find((n) => n.id === id)?.name ?? id
+                      setNote({ for: response, text: `No cited passage for ${name}.` })
+                    }
                   }}
                 />
               </LazyView>
+            )}
+            {tab === 'graph' && (
+              <p className="ev__note" role="status">
+                {note?.for === response ? note.text : ''}
+              </p>
             )}
             {tab === 'facts' && <FactsTable facts={response.facts} />}
             {tab === 'sources' && <SourcesList sources={response.sources} highlight={highlightSectionId} />}
