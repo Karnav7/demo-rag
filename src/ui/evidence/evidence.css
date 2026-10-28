@@ -271,6 +271,18 @@
 .cy__step + .cy__step {
   margin-top: 18px;
 }
+.cy__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--mute);
+  font-size: 12px;
+}
+.cy__copy-all {
+  flex: none;
+}
 .cy__head {
   display: flex;
   align-items: center;

@@ -110,6 +110,18 @@ describe('Evidence', () => {
     expect(screen.getByRole('button', { name: 'Sort by relation' }).closest('th')).toHaveAttribute('aria-sort', 'none')
   })
 
+  it('cypher "Copy all" copies every query, each headed by its stage', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    render(<Harness r={response()} initial="cypher" />)
+    const user = setup()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const btn = screen.getByRole('button', { name: 'Copy all queries' })
+    expect(btn).toHaveTextContent('Copy all')
+    await user.click(btn)
+    expect(writeText).toHaveBeenCalledWith('// Lexical search\nMATCH (n) RETURN n\n\n// Expand\nMATCH (a)-[r]->(b) RETURN r')
+    expect(btn).toHaveTextContent('Copied')
+  })
+
   it('marks the highlighted source section', () => {
     render(<Harness r={response()} initial="sources" highlight="sec-2" />)
     const cur = document.querySelectorAll('[aria-current="true"]')
