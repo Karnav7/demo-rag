@@ -142,6 +142,14 @@ describe('Evidence', () => {
     expect(count('Trace')).toBeUndefined()
   })
 
+  it('help popover links to the full guide', async () => {
+    render(<Harness r={response()} />)
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'What is this tab?' }))
+    const link = within(screen.getByRole('note')).getByRole('link', { name: 'Full guide' })
+    expect(link).toHaveAttribute('href', '#/guide')
+  })
+
   it('marks the highlighted source section', () => {
     render(<Harness r={response()} initial="sources" highlight="sec-2" />)
     const cur = document.querySelectorAll('[aria-current="true"]')

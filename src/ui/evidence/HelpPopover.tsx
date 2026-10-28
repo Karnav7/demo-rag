@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { HelpCircle } from 'lucide-react'
+import { ArrowRight, HelpCircle } from 'lucide-react'
 import { usePopover } from '../chat/usePopover'
 
 export function HelpPopover({ text }: { text: string }) {
@@ -20,7 +20,11 @@ export function HelpPopover({ text }: { text: string }) {
       </button>
       {pop.open && (
         <div ref={pop.popRef} id={id} className="help__pop" role="note" tabIndex={-1} data-pop>
-          {text}
+          <p className="help__text">{text}</p>
+          {/* A plain hash link: the app runs under HashRouter, and the panel also renders outside a router in tests. */}
+          <a className="help__link" href="#/guide">
+            Full guide <ArrowRight size={12} aria-hidden />
+          </a>
         </div>
       )}
     </div>

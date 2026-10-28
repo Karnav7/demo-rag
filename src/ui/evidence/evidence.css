@@ -121,6 +121,26 @@
   outline: 0;
   animation: ev-pop 0.2s var(--ease) both;
 }
+.help__text {
+  margin: 0;
+}
+.help__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+.help__link:hover {
+  text-decoration: underline;
+}
+.help__link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
 
 /* Facts */
 .facts__bar {
