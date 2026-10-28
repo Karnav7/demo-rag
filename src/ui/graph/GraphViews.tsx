@@ -1,9 +1,10 @@
-import { Component, lazy, Suspense, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useRef, useState, type ComponentType } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { NodeLabel, Subgraph, TraceStage } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { Force } from './Force'
 import { Legend } from './Legend'
+import { Boundary } from '../shell/Boundary'
 import { Radial } from './Radial'
 import { Replay } from './Replay'
 import { LABEL_ORDER, WEBGL_FALLBACK, type GraphViewProps } from './graphStyle'
@@ -46,15 +47,6 @@ const VIEWS: Record<Exclude<GraphVariant, 'replay'>, ComponentType<GraphViewProp
 /** What a view shows if it throws or its chunk fails to load; the switcher and other views keep working. */
 const BROKEN: Partial<Record<GraphVariant, string>> = { three: WEBGL_FALLBACK }
 
-class ViewBoundary extends Component<{ fallback: string; children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() {
-    return { failed: true }
-  }
-  render() {
-    return this.state.failed ? <p className="ev-empty">{this.props.fallback}</p> : this.props.children
-  }
-}
 
 export interface GraphViewsProps {
   subgraph: Subgraph
@@ -124,7 +116,7 @@ export function GraphViews({ subgraph, trace, onNodeOpen }: GraphViewsProps) {
       <div className="g__stage">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={variant} className="g__canvas" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={fade}>
-            <ViewBoundary fallback={BROKEN[variant] ?? "This view couldn't load. The other views still work."}>
+            <Boundary fallback={<p className="ev-empty">{BROKEN[variant] ?? "This view couldn't load. The other views still work."}</p>}>
               <Suspense fallback={<p className="ev-empty">Loading view…</p>}>
                 {View ? (
                   <View subgraph={subgraph} dim={dim} onNodeOpen={onNodeOpen} />
@@ -132,7 +124,7 @@ export function GraphViews({ subgraph, trace, onNodeOpen }: GraphViewsProps) {
                   <Replay subgraph={subgraph} trace={trace} dim={dim} onNodeOpen={onNodeOpen} />
                 )}
               </Suspense>
-            </ViewBoundary>
+            </Boundary>
           </motion.div>
         </AnimatePresence>
       </div>

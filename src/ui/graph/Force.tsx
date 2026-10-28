@@ -154,7 +154,8 @@ export function NodeMark({
       transform={`translate(${x},${y})`}
       aria-label={nodeAria(n)}
       style={style}
-      onClick={onOpen}
+      // The second click of a double-click (which releases a pin in Force) must not open the node again.
+      onClick={(e) => e.detail <= 1 && onOpen()}
       {...activate(onOpen)}
       {...handlers}
     >

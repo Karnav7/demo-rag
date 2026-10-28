@@ -352,7 +352,39 @@
   }
 }
 
+/* Code-split views: loading placeholder and load-failure note. */
+.lazy-note {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 28px auto;
+  max-width: 30ch;
+  text-align: center;
+  color: var(--mute);
+  line-height: 1.5;
+}
+.lazy-note p {
+  margin: 0;
+}
+.lazy-note--loading {
+  display: block;
+  animation: lazy-in 0.4s var(--ease) 0.2s both; /* stays invisible for quick loads */
+}
+.lazy-note__reload {
+  border-color: var(--line);
+  color: var(--ink);
+}
+@keyframes lazy-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .lazy-note--loading {
+    animation: none;
+  }
   .conv,
   .sb__link {
     transform: none !important;

@@ -231,11 +231,12 @@ describe('Graph views', () => {
       fireEvent.pointerUp(el, { clientX: 30, clientY: 25, pointerId: 1 })
     }
 
-    it('a drag pins the node; a double-click releases it', () => {
+    it('a drag pins the node; a double-click releases it without opening it twice', async () => {
       const restore = withCTM()
       vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1)
       try {
-        render(<Force subgraph={subgraph} dim={false} onNodeOpen={() => {}} />)
+        const onNodeOpen = vi.fn()
+        render(<Force subgraph={subgraph} dim={false} onNodeOpen={onNodeOpen} />)
         const el = screen.getByRole('button', { name: 'Meridian Ltd (Company)' })
         const other = screen.getByRole('button', { name: 'Ada Vance (Person)' })
         fireEvent.doubleClick(el) // nothing pinned yet: a no-op
@@ -245,8 +246,13 @@ describe('Graph views', () => {
         expect(other).not.toHaveClass('is-pinned')
         fireEvent.doubleClick(other) // releasing an unpinned node changes nothing
         expect(el).toHaveClass('is-pinned')
-        fireEvent.doubleClick(el)
+        await act(() => new Promise((r) => setTimeout(r, 0))) // past the post-drag click suppression
+        // A real double-click: click (detail 1), click (detail 2), dblclick.
+        fireEvent.click(el, { detail: 1 })
+        fireEvent.click(el, { detail: 2 })
+        fireEvent.doubleClick(el, { detail: 2 })
         expect(el).not.toHaveClass('is-pinned')
+        expect(onNodeOpen).toHaveBeenCalledTimes(1)
       } finally {
         restore()
       }

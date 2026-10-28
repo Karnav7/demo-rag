@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from 'react'
+import { lazy, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatResponse } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
@@ -6,6 +6,7 @@ import { CypherView } from './CypherView'
 import { FactsTable } from './FactsTable'
 import { firstCitedSection } from '../graph/graphStyle'
 import { HelpPopover } from './HelpPopover'
+import { LazyView } from '../shell/Boundary'
 import { SourcesList } from './SourcesList'
 import { TraceSteps } from './TraceSteps'
 import './evidence.css'
@@ -103,7 +104,7 @@ export function EvidencePanel({
             transition={fade}
           >
             {tab === 'graph' && (
-              <Suspense fallback={<p className="ev-empty">Loading graph…</p>}>
+              <LazyView label="Loading graph…">
                 <GraphViews
                   subgraph={response.subgraph}
                   trace={response.trace}
@@ -112,7 +113,7 @@ export function EvidencePanel({
                     if (s) onOpenSection?.(s)
                   }}
                 />
-              </Suspense>
+              </LazyView>
             )}
             {tab === 'facts' && <FactsTable facts={response.facts} />}
             {tab === 'sources' && <SourcesList sources={response.sources} highlight={highlightSectionId} />}

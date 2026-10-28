@@ -1,12 +1,13 @@
-import { lazy, Suspense } from 'react'
+import { lazy } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Shell } from './ui/shell/Shell'
 import { ChatView } from './ui/chat/ChatView'
+import { LazyView } from './ui/shell/Boundary'
 
 // The explainer pages are read once in a while; they load on first visit, out of the main chunk.
 const Architecture = lazy(() => import('./ui/pages/Architecture').then((m) => ({ default: m.Architecture })))
 const Guide = lazy(() => import('./ui/pages/Guide').then((m) => ({ default: m.Guide })))
-const page = (el: React.ReactNode) => <Suspense fallback={null}>{el}</Suspense>
+const page = (el: React.ReactNode) => <LazyView label="Loading page…">{el}</LazyView>
 
 export default function App() {
   return (
