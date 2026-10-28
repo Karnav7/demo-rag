@@ -2,13 +2,37 @@ import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Search } from 'lucide-react'
 import type { Fact } from '../../domain/types'
 
-type Sort = 'none' | 'desc' | 'asc'
-const NEXT: Record<Sort, Sort> = { none: 'desc', desc: 'asc', asc: 'none' }
+type Key = 'subject' | 'relation' | 'object' | 'confidence'
+type Dir = 'asc' | 'desc'
+type Sort = { key: Key; dir: Dir } | null
+
+const COLS: { key: Key; label: string; name: string }[] = [
+  { key: 'subject', label: 'Subject', name: 'subject' },
+  { key: 'relation', label: 'Relation', name: 'relation' },
+  { key: 'object', label: 'Object', name: 'object' },
+  { key: 'confidence', label: 'Conf.', name: 'confidence' },
+]
+/** Confidence starts high-first, text columns A to Z; a third click on the same column restores retrieval order. */
+const FIRST: Record<Key, Dir> = { subject: 'asc', relation: 'asc', object: 'asc', confidence: 'desc' }
+
+function nextSort(cur: Sort, key: Key): Sort {
+  if (!cur || cur.key !== key) return { key, dir: FIRST[key] }
+  if (cur.dir === FIRST[key]) return { key, dir: FIRST[key] === 'asc' ? 'desc' : 'asc' }
+  return null
+}
+
+const relText = (r: string) => r.replace(/_/g, ' ').toLowerCase()
+function compare(a: Fact, b: Fact, key: Key): number {
+  if (key === 'confidence') return a.confidence - b.confidence
+  const va = key === 'relation' ? relText(a.relation) : a[key]
+  const vb = key === 'relation' ? relText(b.relation) : b[key]
+  return va.localeCompare(vb)
+}
 
 export function FactsTable({ facts }: { facts: Fact[] }) {
   const [q, setQ] = useState('')
   const [usedOnly, setUsedOnly] = useState(false)
-  const [sort, setSort] = useState<Sort>('none')
+  const [sort, setSort] = useState<Sort>(null)
 
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase()
@@ -17,13 +41,13 @@ export function FactsTable({ facts }: { facts: Fact[] }) {
         (!usedOnly || f.used) &&
         (!needle || `${f.subject} ${f.relation} ${f.relation.replace(/_/g, ' ')} ${f.object}`.toLowerCase().includes(needle)),
     )
-    if (sort === 'none') return list
-    return [...list].sort((a, b) => (sort === 'desc' ? b.confidence - a.confidence : a.confidence - b.confidence))
+    if (!sort) return list
+    const sign = sort.dir === 'asc' ? 1 : -1
+    return [...list].sort((a, b) => sign * compare(a, b, sort.key))
   }, [facts, q, usedOnly, sort])
 
   if (facts.length === 0) return <p className="ev-empty">No facts for this answer.</p>
 
-  const SortIcon = sort === 'desc' ? ArrowDown : sort === 'asc' ? ArrowUp : ChevronsUpDown
   return (
     <div className="facts">
       <div className="facts__bar">
@@ -51,21 +75,34 @@ export function FactsTable({ facts }: { facts: Fact[] }) {
         <table className="facts__table">
           <thead>
             <tr>
-              <th scope="col">Subject</th>
-              <th scope="col">Relation</th>
-              <th scope="col">Object</th>
-              <th scope="col" aria-sort={sort === 'none' ? 'none' : sort === 'desc' ? 'descending' : 'ascending'} className="facts__num">
-                <button type="button" className="facts__sort" aria-label="Sort by confidence" onClick={() => setSort(NEXT[sort])}>
-                  Conf. <SortIcon size={12} aria-hidden />
-                </button>
-              </th>
+              {COLS.map((c) => {
+                const on = sort?.key === c.key ? sort.dir : null
+                const Icon = on === 'desc' ? ArrowDown : on === 'asc' ? ArrowUp : ChevronsUpDown
+                return (
+                  <th
+                    key={c.key}
+                    scope="col"
+                    aria-sort={on === 'desc' ? 'descending' : on === 'asc' ? 'ascending' : 'none'}
+                    className={c.key === 'confidence' ? 'facts__num' : undefined}
+                  >
+                    <button
+                      type="button"
+                      className={`facts__sort${on ? ' is-on' : ''}`}
+                      aria-label={`Sort by ${c.name}`}
+                      onClick={() => setSort((cur) => nextSort(cur, c.key))}
+                    >
+                      {c.label} <Icon size={12} aria-hidden />
+                    </button>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
             {rows.map((f) => (
               <tr key={f.rel_id} className={f.used ? 'is-used' : undefined}>
                 <td>{f.subject}</td>
-                <td className="facts__rel">{f.relation.replace(/_/g, ' ').toLowerCase()}</td>
+                <td className="facts__rel">{relText(f.relation)}</td>
                 <td>{f.object}</td>
                 <td className="facts__num">{f.confidence.toFixed(2)}</td>
               </tr>

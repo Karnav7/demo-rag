@@ -82,6 +82,34 @@ describe('Evidence', () => {
     expect(rows()).toEqual(['Gamma Inc', 'Alpha Ltd'])
   })
 
+  it('sorts facts by any column; a third click restores retrieval order', async () => {
+    const r = response({
+      facts: [
+        { rel_id: 'r1', subject: 'Gamma Inc', relation: 'OWNS', object: 'Beta LLC', confidence: 0.5, section_id: null, used: true },
+        { rel_id: 'r2', subject: 'Alpha Ltd', relation: 'DIRECTOR_OF', object: 'Zeta Co', confidence: 0.9, section_id: null, used: true },
+        { rel_id: 'r3', subject: 'Beta LLC', relation: 'CONTROLS', object: 'Alpha Ltd', confidence: 0.7, section_id: null, used: false },
+      ],
+    })
+    render(<Harness r={r} />)
+    const user = setup()
+    const col = (i: number) => screen.getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell')[i].textContent)
+    const subject = screen.getByRole('button', { name: 'Sort by subject' })
+    await user.click(subject)
+    expect(col(0)).toEqual(['Alpha Ltd', 'Beta LLC', 'Gamma Inc'])
+    expect(subject.closest('th')).toHaveAttribute('aria-sort', 'ascending')
+    await user.click(subject)
+    expect(col(0)).toEqual(['Gamma Inc', 'Beta LLC', 'Alpha Ltd'])
+    await user.click(subject)
+    expect(col(0)).toEqual(['Gamma Inc', 'Alpha Ltd', 'Beta LLC'])
+    expect(subject.closest('th')).toHaveAttribute('aria-sort', 'none')
+
+    await user.click(screen.getByRole('button', { name: 'Sort by relation' }))
+    expect(col(1)).toEqual(['controls', 'director of', 'owns'])
+    await user.click(screen.getByRole('button', { name: 'Sort by object' }))
+    expect(col(2)).toEqual(['Alpha Ltd', 'Beta LLC', 'Zeta Co'])
+    expect(screen.getByRole('button', { name: 'Sort by relation' }).closest('th')).toHaveAttribute('aria-sort', 'none')
+  })
+
   it('marks the highlighted source section', () => {
     render(<Harness r={response()} initial="sources" highlight="sec-2" />)
     const cur = document.querySelectorAll('[aria-current="true"]')
