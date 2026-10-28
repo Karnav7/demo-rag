@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as pipeline from '../engine/pipeline'
 import { createClient, isLiveSimulated } from './chatClient'
 import type { ChatEvent, ChatRequest, Source } from '../domain/types'
+import { starterQuestions } from '../ui/chat/suggestions'
 
 const req = (source: Source): ChatRequest => ({
   question: 'Who is the ultimate beneficial owner of Meridian?',
@@ -33,7 +34,7 @@ describe('SnapshotChatClient', () => {
     const done = events.at(-1)
     if (done?.type !== 'done') throw new Error('no done')
     const stageMs = events.flatMap((e) => (e.type === 'stage' ? [e.stage.ms] : []))
-    expect(stageMs.every((ms) => ms >= 40 && ms <= 120)).toBe(true)
+    expect(stageMs.every((ms) => ms >= 110 && ms <= 260)).toBe(true)
     expect(done.response.trace.map((s) => s.ms)).toEqual(stageMs)
     expect(done.response.stats.totalMs).toBe(stageMs.reduce((a, b) => a + b, 0))
   })
@@ -54,6 +55,22 @@ describe('SnapshotChatClient', () => {
       return done.response.stats.totalMs
     }
     expect(await total('live')).toBeGreaterThan(await total('offline'))
+  })
+
+  it('starter questions take a realistic 2.5–6 s end to end in both modes', async () => {
+    for (const source of ['offline', 'live'] as const) {
+      for (const question of starterQuestions()) {
+        const start = Date.now()
+        const run = (async () => {
+          for await (const e of createClient(source).chat({ ...req(source), question }, new AbortController().signal)) void e
+        })()
+        await vi.runAllTimersAsync()
+        await run
+        const elapsed = Date.now() - start
+        expect(elapsed, `${source}: ${question}`).toBeGreaterThanOrEqual(2500)
+        expect(elapsed, `${source}: ${question}`).toBeLessThanOrEqual(6000)
+      }
+    }
   })
 
   it('abort mid-stream yields no further events', async () => {

@@ -3,12 +3,13 @@ import type { ChatEvent, ChatRequest } from '../domain/types'
 import { runPipeline } from '../engine/pipeline'
 import type { ChatClient } from './chatClient'
 
-export interface LatencyProfile { minMs: number; maxMs: number }
+/** Per-stage latency, plus a "thinking" pause before the first stage (request setup, model warm-up). */
+export interface LatencyProfile { minMs: number; maxMs: number; thinkMinMs: number; thinkMaxMs: number }
 export const LATENCY: Record<'offline' | 'live', LatencyProfile> = {
-  offline: { minMs: 40, maxMs: 120 },
-  live: { minMs: 120, maxMs: 450 },
+  offline: { minMs: 110, maxMs: 260, thinkMinMs: 650, thinkMaxMs: 900 },
+  live: { minMs: 180, maxMs: 360, thinkMinMs: 800, thinkMaxMs: 1100 },
 }
-const TOKEN_MS = { min: 18, max: 35 }
+const TOKEN_MS = { min: 14, max: 24 }
 
 /** Seeded PRNG (mulberry32) keyed by a string, so timings are stable per question. */
 function seeded(key: string): () => number {
@@ -60,7 +61,9 @@ export class SnapshotChatClient implements ChatClient {
     }
     const { stages: raw, response } = result
 
-    const stages = raw.map((s) => ({ ...s, ms: between(this.latency.minMs, this.latency.maxMs) }))
+    const { minMs, maxMs, thinkMinMs, thinkMaxMs } = this.latency
+    if (!(await wait(between(thinkMinMs, thinkMaxMs), signal))) return
+    const stages = raw.map((s) => ({ ...s, ms: between(minMs, maxMs) }))
     for (const stage of stages) {
       if (!(await wait(stage.ms, signal))) return
       yield { type: 'stage', stage }
