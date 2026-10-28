@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 import { DUR, EASE, useReducedMotion } from './motion'
 import { motion } from 'motion/react'
@@ -44,6 +44,13 @@ export function ThemeToggle() {
   const { theme, toggle } = useTheme()
   const reduced = useReducedMotion()
   const dark = theme === 'dark'
+  // The icon is keyed by theme, so each switch mounts the new glyph and turns it in to upright. Nothing turns on
+  // first paint, and nothing at all with reduced motion.
+  const switched = useRef(false)
+  useEffect(() => {
+    switched.current = true
+  }, [])
+  const enter = reduced || !switched.current ? false : { rotate: -90, opacity: 0 }
   return (
     <button
       type="button"
@@ -53,8 +60,10 @@ export function ThemeToggle() {
       title={dark ? 'Switch to light theme' : 'Switch to dark theme'}
     >
       <motion.span
+        key={theme}
         className="theme-toggle__icon"
-        animate={{ rotate: dark ? -180 : 0 }}
+        initial={enter}
+        animate={{ rotate: 0, opacity: 1 }}
         transition={reduced ? { duration: 0 } : { duration: DUR.slow, ease: EASE }}
       >
         {dark ? <Moon size={15} aria-hidden /> : <Sun size={15} aria-hidden />}
