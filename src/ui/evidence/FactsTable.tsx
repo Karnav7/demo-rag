@@ -68,6 +68,9 @@ export function FactsTable({ facts }: { facts: Fact[] }) {
           </span>
           Used only
         </button>
+        <span className="facts__count" aria-live="polite">
+          {rows.length} of {facts.length}
+        </span>
       </div>
       {rows.length === 0 ? (
         <p className="ev-empty">No facts match.</p>

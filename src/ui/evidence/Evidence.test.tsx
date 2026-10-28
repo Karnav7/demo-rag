@@ -150,6 +150,14 @@ describe('Evidence', () => {
     expect(link).toHaveAttribute('href', '#/guide')
   })
 
+  it('facts bar counts the rows shown out of all facts', async () => {
+    render(<Harness r={response()} />)
+    const user = setup()
+    expect(screen.getByText('2 of 2')).toBeInTheDocument()
+    await user.click(screen.getByRole('switch', { name: 'Only facts used in the answer' }))
+    expect(screen.getByText('1 of 2')).toBeInTheDocument()
+  })
+
   it('marks the highlighted source section', () => {
     render(<Harness r={response()} initial="sources" highlight="sec-2" />)
     const cur = document.querySelectorAll('[aria-current="true"]')

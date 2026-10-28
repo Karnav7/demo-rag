@@ -211,6 +211,13 @@
   font-size: 11.5px;
   color: var(--mute);
 }
+.facts__count {
+  margin-left: auto;
+  color: var(--mute);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .facts__num {
   text-align: right !important;
   padding-right: 0 !important;
