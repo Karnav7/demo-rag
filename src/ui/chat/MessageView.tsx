@@ -96,10 +96,10 @@ function StageProgress({ stages, thinking }: { stages: TraceStage[]; thinking: s
 }
 
 /** Who said it and when, above each turn; hovering the time shows the full date. */
-function TurnHead({ name, at }: { name: string; at: number }) {
+function TurnHead({ name, at }: { name?: string; at: number }) {
   return (
     <div className="turn__head">
-      <span className="turn__name">{name}</span>
+      {name && <span className="turn__name">{name}</span>}
       <time className="turn__time" dateTime={new Date(at).toISOString()} title={fullTime(at)}>
         {clockTime(at)}
       </time>
@@ -117,7 +117,7 @@ function UserMessage({ m, fresh }: { m: Message; fresh: boolean }) {
     >
       <UserAvatar />
       <div className="turn__main">
-        <TurnHead name="You" at={m.createdAt} />
+        <TurnHead at={m.createdAt} />
         <article className="msg msg--user" aria-label="Your question">
           <p>{m.text}</p>
         </article>

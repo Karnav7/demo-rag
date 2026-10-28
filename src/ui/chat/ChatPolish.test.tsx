@@ -179,7 +179,8 @@ describe('turns: avatars, names and times', () => {
     await ask('Who owns Meridian?')
     const user = container.querySelector('.turn--user')!
     expect(user.querySelector('.avatar--user')).toHaveTextContent('You')
-    expect(user.querySelector('.turn__name')).toHaveTextContent('You')
+    expect(user.querySelector('.turn__name')).toBeNull() // the avatar says "You"; no repeat beside the time
+    expect(user.querySelector('.turn__time')).not.toBeNull()
     const asst = container.querySelector('.turn--asst')!
     expect(asst.querySelector('.turn__name')).toHaveTextContent('demo-rag')
     expect(asst.querySelector('.avatar--asst svg')).not.toBeNull()

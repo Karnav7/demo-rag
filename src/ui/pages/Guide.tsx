@@ -69,7 +69,7 @@ export function Guide() {
           If you scroll up mid-answer, <strong>Jump to latest</strong> brings you back down.
         </p>
         <p>
-          Each turn shows who spoke (<strong>You</strong> or <strong>demo-rag</strong>) and when; an answer's time is when it finished.
+          Your turns carry a <strong>You</strong> avatar, answers carry demo-rag's mark, and each shows its time; an answer's time is when it finished.
           Hover a time for the full date. A label such as <em>Today</em> or <em>Yesterday</em> opens each new day of the conversation.
         </p>
       </Sec>
