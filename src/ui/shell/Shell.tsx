@@ -66,7 +66,7 @@ export function Shell() {
           <button ref={openerRef} type="button" className="shell__menu" aria-label="Open conversations" aria-expanded={open} onClick={() => show()}>
             <PanelLeft size={18} aria-hidden />
           </button>
-          <span className="shell__title">dummy-rag</span>
+          <span className="shell__title">demo-rag</span>
         </header>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div

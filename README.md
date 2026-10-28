@@ -1,4 +1,4 @@
-# dummy-rag
+# demo-rag
 
 A Graph-RAG investigation demo for financial crime. You ask questions about a fictional world of companies, people,
 accounts, transactions and sanctions entries ("Who ultimately owns Meridian Trade LLC?", "Why was this wire
@@ -55,9 +55,12 @@ the demo.
 
 ## Deploying
 
-`.github/workflows/pages.yml` builds with `npm ci && npm run build` and publishes `dist/` to GitHub Pages on every
-push to `main` (or by hand from the Actions tab). Enable Pages for the repository with "GitHub Actions" as the
-source. The app uses relative asset paths and hash routing, so it works under any sub-path.
+Live: **https://karnav7.github.io/demo-rag/**
+
+`.github/workflows/pages.yml` runs on every push to `feat/ux-polish` (or by hand from the Actions tab): it runs the
+tests, builds with `npm run build`, and publishes `dist/` to the `gh-pages` branch, which GitHub Pages serves
+(Settings → Pages → Deploy from a branch → `gh-pages`). To host another branch, change the branch in the workflow.
+The app uses relative asset paths and hash routing, so it works under any sub-path.
 
 ## Project layout
 
@@ -73,8 +76,8 @@ docs          design spec, plan and the Lattice parity report (docs/parity.md)
 
 ## Credits and licence
 
-dummy-rag is an original app inspired by [Lattice](https://aptsalt.github.io/lattice/) by aptsalt, an MIT-licensed
-Graph-RAG demo over a leave-policy knowledge graph. dummy-rag re-implements Lattice's features for a different
+demo-rag is an original app inspired by [Lattice](https://aptsalt.github.io/lattice/) by aptsalt, an MIT-licensed
+Graph-RAG demo over a leave-policy knowledge graph. demo-rag re-implements Lattice's features for a different
 domain; it does not include Lattice's code, copy or assets. See `docs/parity.md` for how the two compare.
 
-dummy-rag is released under the MIT licence. See [LICENSE](LICENSE).
+demo-rag is released under the MIT licence. See [LICENSE](LICENSE).

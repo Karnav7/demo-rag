@@ -43,7 +43,7 @@ export function Guide() {
   return (
     <Page
       title="Every feature explained"
-      lede="A walk through each control in dummy-rag, what it does, and how to read what comes back."
+      lede="A walk through each control in demo-rag, what it does, and how to read what comes back."
       toc={TOC}
     >
       <Sec id="sidebar" title="Sidebar and conversations">

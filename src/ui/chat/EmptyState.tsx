@@ -13,7 +13,7 @@ export function EmptyState({ onAsk }: { onAsk(q: string): void }) {
     <div className="empty">
       <motion.h1 className="empty__title" {...rise(0)}>What do you want to trace?</motion.h1>
       <motion.p className="empty__sub" {...rise(0.06)}>
-        dummy-rag answers only from the graph and cites every claim. Fictional data for demonstration. Not financial or
+        demo-rag answers only from the graph and cites every claim. Fictional data for demonstration. Not financial or
         legal advice.
       </motion.p>
       <motion.div className="chips chips--suggest" role="group" aria-label="Suggested questions" {...rise(0.25)}>

@@ -42,7 +42,7 @@ export function Sidebar({ onNavigate, narrow = false, open = false }: { onNaviga
     >
       <Link to="/" className="sb__brand" onClick={onNavigate}>
         <span className="sb__dot" aria-hidden />
-        dummy-rag
+        demo-rag
       </Link>
 
       <button

@@ -1,14 +1,14 @@
 # Parity with Lattice
 
 Checked on 2026-10-27 against Lattice's upstream source (MIT, Angular), user-facing features only. Lattice answers
-questions about leave policy across three countries; dummy-rag answers questions about a fictional
+questions about leave policy across three countries; demo-rag answers questions about a fictional
 financial-crime graph. Where a feature exists in both but takes a domain- or layout-specific shape here, it is
 marked **adapted**.
 
 Status key:
 
-- **present**: dummy-rag has the feature with the same behaviour.
-- **adapted**: the feature is there, reshaped for the fintech domain or for dummy-rag's three-column layout.
+- **present**: demo-rag has the feature with the same behaviour.
+- **adapted**: the feature is there, reshaped for the fintech domain or for demo-rag's three-column layout.
 - **fixed**: it was missing, and this parity pass added it (one commit and one test each).
 - **missing (deferred)**: not built, with the reason given.
 
@@ -24,7 +24,7 @@ Status key:
 
 ## App shell and routes
 
-| Lattice feature | Status | dummy-rag |
+| Lattice feature | Status | demo-rag |
 | --- | --- | --- |
 | Routes `/`, `/architecture`, `/guide`, catch-all redirect to `/` | present | `src/App.tsx` (hash routing for GitHub Pages) |
 | Explainer pages load on demand | present | `src/App.tsx` (`React.lazy`) |
@@ -37,13 +37,13 @@ Status key:
 | Delete with inline "Delete? Yes / No" | present | `src/ui/shell/ConversationItem.tsx` |
 | Footer Guide link ("Every feature explained") and Architecture link | present | `src/ui/shell/Sidebar.tsx` |
 | Architecture link tooltip with the graph's node and relationship counts | fixed | `src/ui/shell/Sidebar.tsx` |
-| Theme toggle, persisted | present | `src/ui/theme/ThemeToggle.tsx` (`dummy-rag.theme`) |
+| Theme toggle, persisted | present | `src/ui/theme/ThemeToggle.tsx` (`demo-rag.theme`) |
 | Narrow screens: sidebar behind "Open conversations" | present | `src/ui/shell/Shell.tsx`, `src/ui/shell/useDrawer.ts` |
 | Escape closes menus and popovers | present | `src/ui/chat/usePopover.ts`, `src/ui/shell/useDrawer.ts` |
 
 ## Chat
 
-| Lattice feature | Status | dummy-rag |
+| Lattice feature | Status | demo-rag |
 | --- | --- | --- |
 | Top bar with the conversation title | present | `src/ui/chat/ChatView.tsx` (`ChatHeader`) |
 | Top-bar data-source status chip ("Neo4j live" / snapshot file) | adapted | The composer's Data source control shows the active source, and each answer's stats line names the source it used: `src/ui/chat/Composer.tsx`, `src/ui/chat/MessageView.tsx` |
@@ -69,7 +69,7 @@ Status key:
 
 ## Composer
 
-| Lattice feature | Status | dummy-rag |
+| Lattice feature | Status | demo-rag |
 | --- | --- | --- |
 | Data source menu: Live Neo4j / Offline snapshot, with hints | present | `src/ui/chat/Composer.tsx`. Live is simulated until `VITE_CHAT_URL` is set. |
 | Retrieval mode menu: Lexical / Vector / Hybrid / Graph, with hints | present | `src/ui/chat/Composer.tsx`, `src/ui/chat/labels.ts` |
@@ -77,17 +77,17 @@ Status key:
 | LLM answer toggle (off = extractive) | present | `src/ui/chat/Composer.tsx`, `src/engine/answer.ts` |
 | Enter sends, Shift+Enter newline | present | `src/ui/chat/Composer.tsx` |
 | Inline "↵ send · ⇧↵ newline" hint | adapted | Documented in the Guide's keyboard section rather than in the composer, which keeps the phone layout to two rows: `src/ui/pages/Guide.tsx` |
-| Settings persisted | present | `src/store/store.ts` (`dummy-rag.settings`) |
+| Settings persisted | present | `src/store/store.ts` (`demo-rag.settings`) |
 
 ## Evidence panel
 
-| Lattice feature | Status | dummy-rag |
+| Lattice feature | Status | demo-rag |
 | --- | --- | --- |
 | Tabs Subgraph · Facts · Sources · Cypher · Trace | present | `src/ui/evidence/EvidencePanel.tsx` |
 | Item counts on the Subgraph, Facts and Sources tabs | fixed | `src/ui/evidence/EvidencePanel.tsx` |
 | "What is this tab?" help popover | present | `src/ui/evidence/HelpPopover.tsx` |
 | Help popover links to the full guide | fixed | `src/ui/evidence/HelpPopover.tsx` |
-| Graph view switcher, persisted | present | `src/ui/graph/GraphViews.tsx` (`dummy-rag.graph-variant`) |
+| Graph view switcher, persisted | present | `src/ui/graph/GraphViews.tsx` (`demo-rag.graph-variant`) |
 | Focus / "Dim everything the answer did not use" | present | `src/ui/graph/GraphViews.tsx` |
 | Legend by node type, with used-in-answer and seed keys | present | `src/ui/graph/Legend.tsx` |
 | Legend counts per node type | fixed | `src/ui/graph/Legend.tsx`, `src/ui/graph/GraphViews.tsx` |
@@ -119,7 +119,7 @@ Status key:
 
 ## Pages and persistence
 
-| Lattice feature | Status | dummy-rag |
+| Lattice feature | Status | demo-rag |
 | --- | --- | --- |
 | Architecture: three tiers (front end, API, graph database) | adapted | Rewritten around the in-browser engine plus the `POST /chat` seam: `src/ui/pages/Architecture.tsx` |
 | Architecture: request pipeline, graph schema, why hybrid, API contract | present | `src/ui/pages/Architecture.tsx` |
