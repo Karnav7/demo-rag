@@ -172,3 +172,45 @@ describe('jump to latest and shortcuts', () => {
     expect(signals[0].aborted).toBe(true)
   })
 })
+
+describe('turns: avatars, names and times', () => {
+  it('each turn names its speaker and shows a time with the full date on hover', async () => {
+    const { container } = mount(fixedClient('An answer.'))
+    await ask('Who owns Meridian?')
+    const user = container.querySelector('.turn--user')!
+    expect(user.querySelector('.avatar--user')).toHaveTextContent('You')
+    expect(user.querySelector('.turn__name')).toHaveTextContent('You')
+    const asst = container.querySelector('.turn--asst')!
+    expect(asst.querySelector('.turn__name')).toHaveTextContent('demo-rag')
+    expect(asst.querySelector('.avatar--asst svg')).not.toBeNull()
+    for (const t of container.querySelectorAll('time.turn__time')) {
+      expect(t.getAttribute('dateTime')).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(t.getAttribute('title')).toMatch(/\d{4}/)
+    }
+    expect(screen.getAllByRole('separator', { name: 'Today' })).toHaveLength(1)
+  })
+
+  it('the answer avatar breathes only while the answer is on its way', async () => {
+    const { container } = mount(hangingClient([]))
+    await ask('Who owns Meridian?')
+    expect(container.querySelector('.turn--asst .avatar--busy')).not.toBeNull()
+    await setup().click(screen.getByRole('button', { name: 'Stop answering' }))
+    expect(container.querySelector('.turn--asst .avatar--busy')).toBeNull()
+  })
+
+  it('a separator opens each day of the conversation', () => {
+    const day = 86_400_000
+    const t = Date.now()
+    localStorage.setItem('dummy-rag.conversations', JSON.stringify([{ id: 'c', title: 't', createdAt: t - day, updatedAt: t, messages: [
+      { id: 'u1', role: 'user', text: 'Old question', createdAt: t - day },
+      { id: 'a1', role: 'assistant', text: 'Old answer', createdAt: t - day, completedAt: t - day + 4000 },
+      { id: 'u2', role: 'user', text: 'New question', createdAt: t },
+    ] }]))
+    const store = createStore()
+    store.getState().select('c')
+    render(<StoreProvider store={store}><MemoryRouter><ChatView /></MemoryRouter></StoreProvider>)
+    const seps = screen.getAllByRole('separator').filter((s) => s.classList.contains('daysep'))
+    expect(seps.map((s) => s.getAttribute('aria-label'))).toEqual(['Yesterday', 'Today'])
+    localStorage.clear()
+  })
+})

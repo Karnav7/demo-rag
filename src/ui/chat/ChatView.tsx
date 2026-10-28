@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { ArrowDown, Download, Eraser, MoreHorizontal, PanelRight, X } from 'lucide-react'
 import type { Conversation, Message } from '../../store/store'
 import { useAppStore } from '../../store/StoreProvider'
@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { Composer, COMPOSER_INPUT_ID } from './Composer'
 import { EmptyState } from './EmptyState'
 import { MessageView } from './MessageView'
+import { dayLabel, sameDay } from './time'
 import { usePopover } from './usePopover'
 import { EvidencePanel, type EvidenceTab } from '../evidence/EvidencePanel'
 import { EvidenceDrawerContext, useDrawerMode } from '../evidence/drawer'
@@ -104,13 +105,26 @@ function ChatHeader({
   )
 }
 
+/** A centred day label between hairlines, before the first message of each day (Today, Yesterday, Monday, October 21). */
+function DaySeparator({ at }: { at: number }) {
+  const label = dayLabel(at)
+  return (
+    <div className="daysep" role="separator" aria-label={label}>
+      <span>{label}</span>
+    </div>
+  )
+}
+
 /** Only turns created after the chat view mounted rise in; history (reloads, conversation switches) appears at rest. */
 function MessageList({ messages, since }: { messages: Message[]; since: number }) {
   const reduced = useReducedMotion()
   return (
     <div className="msgs">
-      {messages.map((m) => (
-        <MessageView key={m.id} message={m} fresh={!reduced && m.createdAt >= since} />
+      {messages.map((m, i) => (
+        <Fragment key={m.id}>
+          {(i === 0 || !sameDay(messages[i - 1].createdAt, m.createdAt)) && <DaySeparator at={m.createdAt} />}
+          <MessageView message={m} fresh={!reduced && m.createdAt >= since} />
+        </Fragment>
       ))}
     </div>
   )

@@ -14,6 +14,8 @@ export interface Message {
   vote?: 'up' | 'down' | null
   /** The answer was interrupted (Stop, a conversation switch, or a reload) before it finished. */
   stopped?: boolean
+  /** When an answer settled (finished, failed or stopped); shown as its time. */
+  completedAt?: number
 }
 export interface Conversation { id: string; title: string; createdAt: number; updatedAt: number; messages: Message[] }
 /** A cited section to emphasise in the evidence column (set by citation and graph-node clicks). */
@@ -36,7 +38,8 @@ const isMessage = (v: unknown): v is Message =>
   (v.response === undefined || isResponse(v.response)) &&
   (v.stages === undefined || arr(v.stages)) &&
   (v.vote === undefined || v.vote === null || v.vote === 'up' || v.vote === 'down') &&
-  (v.stopped === undefined || typeof v.stopped === 'boolean')
+  (v.stopped === undefined || typeof v.stopped === 'boolean') &&
+  (v.completedAt === undefined || typeof v.completedAt === 'number')
 const isConversation = (v: unknown): v is Conversation =>
   isObj(v) && typeof v.id === 'string' && typeof v.title === 'string' &&
   typeof v.createdAt === 'number' && typeof v.updatedAt === 'number' &&
@@ -134,7 +137,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     const { ctrl, convId, msgId } = inflight
     inflight = null
     ctrl.abort()
-    updateMsg(convId, msgId, (m) => ({ ...m, pending: false, stopped: true }))
+    updateMsg(convId, msgId, (m) => ({ ...m, pending: false, stopped: true, completedAt: now() }))
   }
 
   async function stream(convId: string, msgId: string, req: ChatRequest) {
@@ -151,7 +154,7 @@ export function createStore(opts: { clientFor?: (s: Source) => ChatClient; now?:
     // Terminal updates clear the in-flight marker first, so the emitted state no longer reports streaming.
     const finish = (fn: (m: Message) => Message) => {
       inflight = null
-      settle(fn)
+      settle((m) => ({ ...fn(m), completedAt: now() }))
     }
     const failed = (message: string) => finish((m) => ({ ...m, pending: false, text: `Something went wrong: ${message}` }))
     try {

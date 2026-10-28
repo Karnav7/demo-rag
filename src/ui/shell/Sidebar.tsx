@@ -4,6 +4,7 @@ import { BookOpen, Network, Plus, Search } from 'lucide-react'
 import { useAppStore } from '../../store/StoreProvider'
 import { ThemeToggle } from '../theme/ThemeToggle'
 import { ConversationItem } from './ConversationItem'
+import { AssistantAvatar } from '../chat/Avatar'
 import { loadWorld } from '../../data/load'
 
 /** "214 nodes · 431 relationships": the size of the graph the app answers from. */
@@ -41,7 +42,7 @@ export function Sidebar({ onNavigate, narrow = false, open = false }: { onNaviga
       inert={narrow && !open}
     >
       <Link to="/" className="sb__brand" onClick={onNavigate}>
-        <span className="sb__dot" aria-hidden />
+        <AssistantAvatar size={20} />
         demo-rag
       </Link>
 

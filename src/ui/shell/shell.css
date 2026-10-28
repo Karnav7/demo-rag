@@ -45,20 +45,13 @@
 .sb__brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 2px 8px 8px;
   font-family: var(--font-head);
   font-weight: var(--head-weight);
   font-size: 18px;
   color: var(--ink);
   text-decoration: none;
-}
-.sb__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: var(--glow);
 }
 .sb__new {
   display: flex;

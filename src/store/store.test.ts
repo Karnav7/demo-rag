@@ -235,6 +235,7 @@ describe('store', () => {
       expect(signals[0].aborted).toBe(true)
       expect(s.getState().isStreaming).toBe(false)
       expect(a).toMatchObject({ pending: false, stopped: true, text: 'partial ' })
+      expect(a.completedAt).toEqual(expect.any(Number))
     })
 
     it('a completed answer is never marked stopped', async () => {
@@ -243,6 +244,17 @@ describe('store', () => {
       await vi.runAllTimersAsync()
       await p
       expect(msgs(s, s.getState().activeId!)[1].stopped).toBeUndefined()
+    })
+
+    it('a settled answer records when it finished, after it was asked', async () => {
+      let t = 1_000
+      const s = createStore({ now: () => (t += 500) })
+      const p = s.getState().send(Q)
+      await vi.runAllTimersAsync()
+      await p
+      const [u, a] = msgs(s, s.getState().activeId!)
+      expect(u.completedAt).toBeUndefined()
+      expect(a.completedAt).toBeGreaterThan(a.createdAt)
     })
 
     it('an answer interrupted by a reload comes back marked stopped', () => {

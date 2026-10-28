@@ -68,6 +68,10 @@ export function Guide() {
           answer, and Send becomes <strong>Stop</strong>. Stopping keeps what arrived and marks it <em>Stopped</em>.
           If you scroll up mid-answer, <strong>Jump to latest</strong> brings you back down.
         </p>
+        <p>
+          Each turn shows who spoke (<strong>You</strong> or <strong>demo-rag</strong>) and when; an answer's time is when it finished.
+          Hover a time for the full date. A label such as <em>Today</em> or <em>Yesterday</em> opens each new day of the conversation.
+        </p>
       </Sec>
 
       <Sec id="messages" title="Message actions">
