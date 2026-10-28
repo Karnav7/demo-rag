@@ -58,4 +58,14 @@ describe('App routes', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: /New conversation/ }))
     expect(await screen.findByRole('group', { name: 'Suggested questions' })).toBeInTheDocument()
   })
+
+  it('a failed page does not stick: navigating on to another lazy page renders it', async () => {
+    window.location.hash = '#/guide'
+    const { default: App } = await import('../../App')
+    render(<App />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t load this view.')
+    await userEvent.setup().click(screen.getByRole('link', { name: 'Architecture' }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Hybrid Graph-RAG, end to end' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
 })

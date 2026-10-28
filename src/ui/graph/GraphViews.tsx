@@ -47,7 +47,6 @@ const VIEWS: Record<Exclude<GraphVariant, 'replay'>, ComponentType<GraphViewProp
 /** What a view shows if it throws or its chunk fails to load; the switcher and other views keep working. */
 const BROKEN: Partial<Record<GraphVariant, string>> = { three: WEBGL_FALLBACK }
 
-
 export interface GraphViewsProps {
   subgraph: Subgraph
   trace: TraceStage[]
