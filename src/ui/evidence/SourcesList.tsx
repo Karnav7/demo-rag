@@ -24,8 +24,8 @@ export function SourcesList({ sources, highlight }: { sources: Section[]; highli
   if (sources.length === 0) return <p className="ev-empty">No sources for this answer.</p>
   return (
     <div className="sources">
-      {groups.map(({ id, doc, sections }) => (
-        <section key={id} className="doc" aria-label={doc?.title ?? id}>
+      {groups.map(({ id, doc, sections }, gi) => (
+        <section key={id} style={{ animationDelay: `${Math.min(gi, 8) * 40}ms` }} className="sec--in doc" aria-label={doc?.title ?? id}>
           <header className="doc__head">
             {doc && <span className="badge">{KIND_LABEL[doc.kind] ?? doc.kind}</span>}
             <h3 className="doc__title">{doc?.title ?? id}</h3>

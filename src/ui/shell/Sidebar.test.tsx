@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { createStore, type AppStore } from '../../store/store'
@@ -36,6 +36,17 @@ const three = [
 ]
 
 describe('Sidebar', () => {
+  it('one active marker follows the selected conversation', async () => {
+    const store = setup(three)
+    await act(async () => store.getState().select('b'))
+    const marker = () => document.querySelectorAll('.conv__ink')
+    expect(marker()).toHaveLength(1)
+    expect(marker()[0].closest('li')).toHaveTextContent('Mule account ring')
+    await act(async () => store.getState().select('c'))
+    expect(marker()).toHaveLength(1)
+    expect(marker()[0].closest('li')).toHaveTextContent('Sanctions screening')
+  })
+
   it('the Architecture link tells the size of the graph on hover', () => {
     setup([])
     const w = loadWorld()

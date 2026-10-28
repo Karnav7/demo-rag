@@ -1,4 +1,4 @@
-import { act, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -183,8 +183,15 @@ describe('Chat', () => {
     const doc = w.documents.find((d) => d.id === sec.document_id)!
     const { container } = render(<Markdown text="Owned by Alpha [1]." citations={[{ n: 1, section_id: sec.id }]} />)
     const cite = container.querySelector<HTMLButtonElement>('button.cite[data-n="1"]')!
-    expect(cite).toHaveAttribute('title', `[1] ${sec.title}, ${doc.title}`)
     expect(cite).toHaveAccessibleName('Source 1')
+    fireEvent.mouseOver(cite)
+    const tip = screen.getByRole('tooltip')
+    expect(tip).toHaveTextContent(`[1] ${sec.title}`)
+    expect(tip).toHaveTextContent(doc.title)
+    expect(tip).toHaveTextContent(sec.text.split('.')[0])
+    expect(cite).toHaveAttribute('aria-describedby', tip.id)
+    fireEvent.mouseOut(cite)
+    expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
   it('clicking a cite selects the message and highlights its section', async () => {

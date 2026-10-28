@@ -96,6 +96,9 @@
 
 :root {
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --dur-fast: 0.15s;
+  --dur-base: 0.25s;
+  --dur-slow: 0.45s;
   --font-body: Inter, system-ui, sans-serif;
 }
 
@@ -148,6 +151,16 @@ body,
 .theme-toggle__icon {
   display: inline-grid;
   place-items: center;
+}
+
+/* Press feedback: controls give a little under the pointer (the independent `scale` property leaves hover transforms alone). */
+:where(.pill, .chip, .act, .composer__send, .g__view, .ev__tab, .conv__open, .cite, .theme-toggle, .facts__sort, .cy__copy):active:not(:disabled) {
+  scale: 0.96;
+}
+:where(.pill, .chip, .act, .composer__send, .g__view, .ev__tab, .conv__open, .cite, .theme-toggle, .facts__sort, .cy__copy) {
+  transition-property: scale, background-color, border-color, color, opacity, box-shadow, transform;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease);
 }
 
 @media (prefers-reduced-motion: reduce) {

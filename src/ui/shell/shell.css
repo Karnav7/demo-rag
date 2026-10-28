@@ -143,6 +143,17 @@
   background: var(--panel);
   box-shadow: 0 0 0 1px var(--line);
 }
+/* The active marker slides between conversations (motion layoutId). */
+.conv__ink {
+  position: absolute;
+  left: -1px;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent);
+}
 .conv__open {
   flex: 1;
   min-width: 0;

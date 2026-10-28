@@ -1,7 +1,7 @@
 import { lazy, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatResponse } from '../../domain/types'
-import { DUR, EASE, useReducedMotion } from '../theme/motion'
+import { DUR, EASE, useCountUp, useReducedMotion } from '../theme/motion'
 import { CypherView } from './CypherView'
 import { FactsTable } from './FactsTable'
 import { firstCitedSection } from '../graph/graphStyle'
@@ -46,6 +46,12 @@ export function EvidencePanel({
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})
   /** Feedback for a graph node with no cited passage to open; belongs to the response it was raised on. */
   const [note, setNote] = useState<{ for: ChatResponse; text: string } | null>(null)
+  // Tab content slides in from the side it was chosen on; counts tick up for answers that arrive while mounted.
+  const prevIdx = useRef(TABS.findIndex((t) => t.id === tab))
+  const firstResponse = useRef(response)
+  const dir = Math.sign(TABS.findIndex((t) => t.id === tab) - prevIdx.current)
+  prevIdx.current = TABS.findIndex((t) => t.id === tab)
+  const freshCounts = !!response && response !== firstResponse.current
 
   if (!response && pending) return <EvidenceSkeleton />
   if (!response) return <p className="evidence__empty">Ask a question to see its evidence.</p>
@@ -87,11 +93,7 @@ export function EvidencePanel({
                 onClick={() => onTab(t.id)}
               >
                 {t.label}
-                {counts[t.id] !== undefined && (
-                  <span className="ev__count" aria-hidden>
-                    {counts[t.id]}
-                  </span>
-                )}
+                {counts[t.id] !== undefined && <TabCount value={counts[t.id]!} fresh={freshCounts} />}
                 {on && <motion.span layoutId="ev-ink" className="ev__ink" transition={ink} />}
               </button>
             )
@@ -104,9 +106,9 @@ export function EvidencePanel({
           <motion.div
             key={tab}
             className={`ev__body${tab === 'graph' ? ' ev__body--fill' : ''}`}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+            initial={reduced ? false : { opacity: 0, x: dir * 6, y: dir ? 0 : 4 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={reduced ? undefined : { opacity: 0, x: dir * -4 }}
             transition={fade}
           >
             {tab === 'graph' && (
@@ -159,5 +161,14 @@ function EvidenceSkeleton() {
         <span className="ev-skel__bar" />
       </div>
     </div>
+  )
+}
+
+function TabCount({ value, fresh }: { value: number; fresh: boolean }) {
+  const shown = useCountUp(value, fresh, 450)
+  return (
+    <span className="ev__count" aria-hidden>
+      {Math.round(shown)}
+    </span>
   )
 }

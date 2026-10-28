@@ -431,6 +431,25 @@
 .msg__actions:focus-within {
   opacity: 1;
 }
+/* Actions drift up into place, one after another, when the answer is hovered or focused. */
+.msg__actions .act {
+  translate: 0 3px;
+  transition:
+    translate var(--dur-base) var(--ease),
+    scale var(--dur-fast) var(--ease),
+    background-color 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+.msg--asst:hover .msg__actions .act,
+.msg--selected .msg__actions .act,
+.msg__actions:focus-within .act {
+  translate: 0 0;
+}
+.msg__actions .act:nth-child(2) { transition-delay: 20ms; }
+.msg__actions .act:nth-child(3) { transition-delay: 40ms; }
+.msg__actions .act:nth-child(4) { transition-delay: 60ms; }
+.msg__actions .act:nth-child(5) { transition-delay: 80ms; }
+.msg__actions .act:nth-child(6) { transition-delay: 100ms; }
 .act {
   display: grid;
   place-items: center;
@@ -850,5 +869,48 @@
   .composer.is-busy::before {
     animation: none;
     background: color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+/* Citation preview: a small glass card above the chip. */
+.md-wrap {
+  position: relative;
+}
+.cite-tip {
+  position: absolute;
+  z-index: 20;
+  width: min(300px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-solid, var(--bg)) 86%, transparent);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: var(--shadow-pop);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 8px));
+  transform-origin: bottom center;
+  animation: cite-tip-in var(--dur-base) var(--ease) both;
+}
+.cite-tip__src {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--cite-tip-accent, var(--accent));
+  font-size: 11px;
+  font-weight: 600;
+}
+.cite-tip__doc {
+  display: block;
+  margin-top: 6px;
+  color: var(--mute);
+  font-size: 11px;
+}
+@keyframes cite-tip-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 2px)) scale(0.97);
   }
 }

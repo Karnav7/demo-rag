@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
+import { motion } from 'motion/react'
+import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import type { Conversation } from '../../store/store'
 
 type Mode = 'idle' | 'menu' | 'rename' | 'confirm'
@@ -75,8 +77,17 @@ export function ConversationItem({ conversation: c, active, onOpen, onRename, on
     close()
   }
 
+  const reduced = useReducedMotion()
   return (
     <li ref={rootRef} className={`conv${active ? ' conv--on' : ''}${mode !== 'idle' ? ' conv--busy' : ''}`}>
+      {active && (
+        <motion.span
+          layoutId="conv-active"
+          className="conv__ink"
+          aria-hidden
+          transition={reduced ? { duration: 0 } : { duration: DUR.base, ease: EASE }}
+        />
+      )}
       {mode === 'rename' ? (
         <input
           ref={inputRef}

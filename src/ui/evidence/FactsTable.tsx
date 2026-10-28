@@ -103,8 +103,12 @@ export function FactsTable({ facts }: { facts: Fact[] }) {
             </tr>
           </thead>
           <tbody>
-            {rows.map((f) => (
-              <tr key={f.rel_id} className={f.used ? 'is-used' : undefined}>
+            {rows.map((f, i) => (
+              <tr
+                key={f.rel_id}
+                className={`facts__row${f.used ? ' is-used' : ''}`}
+                style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}
+              >
                 <td>{f.subject}</td>
                 <td className="facts__rel">{relText(f.relation)}</td>
                 <td>{f.object}</td>

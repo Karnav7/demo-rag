@@ -4,7 +4,7 @@ import { Check, Copy, PanelRight, RotateCcw, Square, ThumbsDown, ThumbsUp } from
 import type { Message } from '../../store/store'
 import type { TraceStage } from '../../domain/types'
 import { useAppStore } from '../../store/StoreProvider'
-import { DUR, EASE, useReducedMotion } from '../theme/motion'
+import { DUR, EASE, useCountUp, useReducedMotion } from '../theme/motion'
 import { confToken } from '../theme/scale'
 import { useEvidenceDrawer } from '../evidence/drawer'
 import { Markdown } from './Markdown'
@@ -14,6 +14,7 @@ const COPIED_MS = 1400
 
 function Meter({ value, grow }: { value: number; grow: boolean }) {
   const v = Math.max(0, Math.min(1, value))
+  const shown = useCountUp(v, grow)
   return (
     <div
       className="meter"
@@ -34,7 +35,7 @@ function Meter({ value, grow }: { value: number; grow: boolean }) {
         />
       </span>
       <span className="meter__label" aria-hidden>
-        Grounding confidence <b>{v.toFixed(2)}</b>
+        Grounding confidence <b>{shown.toFixed(2)}</b>
       </span>
     </div>
   )

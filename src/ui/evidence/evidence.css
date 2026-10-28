@@ -559,3 +559,15 @@
     background-position: -100% 0;
   }
 }
+
+/* Rows and passages arrive in a short cascade. */
+.facts__row,
+.sec--in {
+  animation: ev-row-in var(--dur-slow) var(--ease) both;
+}
+@keyframes ev-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
