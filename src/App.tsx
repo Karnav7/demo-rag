@@ -1,6 +1,7 @@
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Shell } from './ui/shell/Shell'
-import { Placeholder } from './ui/pages/Placeholder'
+import { Architecture } from './ui/pages/Architecture'
+import { Guide } from './ui/pages/Guide'
 import { ChatView } from './ui/chat/ChatView'
 
 export default function App() {
@@ -9,8 +10,8 @@ export default function App() {
       <Routes>
         <Route element={<Shell />}>
           <Route path="/" element={<ChatView />} />
-          <Route path="/architecture" element={<Placeholder title="Architecture" />} />
-          <Route path="/guide" element={<Placeholder title="Guide" />} />
+          <Route path="/architecture" element={<Architecture />} />
+          <Route path="/guide" element={<Guide />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
