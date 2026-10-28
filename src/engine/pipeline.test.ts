@@ -104,6 +104,16 @@ describe('runPipeline', () => {
     for (const x of (w.in.get(ALERTED_TXN) ?? []).filter((x) => x.type === 'FLAGS')) expect(r.answer).toContain(String(w.byId.get(x.from)!.props.rule))
   })
 
+  it.each(MODES.flatMap((mode) => [...starterQuestions(w), `Is ${S.FRONT_COMPANY_NAME} connected to a sanctioned party?`].map((q) => [mode, q] as const)))(
+    'no floating nodes in the subgraph (%s): %s',
+    (mode, q) => {
+      const { response: r } = ask(q, { mode })
+      const degree = new Map<string, number>()
+      for (const e of r.subgraph.edges) for (const id of [e.from, e.to]) degree.set(id, (degree.get(id) ?? 0) + 1)
+      for (const n of r.subgraph.nodes) expect(degree.get(n.id) ?? 0, n.name).toBeGreaterThan(0)
+    },
+  )
+
   it('confidence folds in how strongly the question matched: a vector-only match scores below the same answer found lexically', () => {
     const q = starterQuestions(w)[2]
     const hybrid = ask(q).response

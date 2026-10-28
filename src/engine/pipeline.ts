@@ -225,7 +225,10 @@ export function runPipeline(w: WorldIndex, req: ChatRequest): { stages: TraceSta
     .filter((f, i) => i < MAX_FACTS || c.used.has(f.rel_id))
     .map((f) => ({ ...f, used: c.used.has(f.rel_id) }))
   const edges = facts.map((f) => ({ ...relById.get(f.rel_id)!, used: f.used }))
-  const nodeIds = new Set<string>(seeds)
+  // Nodes are the evidence edges' endpoints plus the focal entity the answer is about (a regulation answer for an
+  // account reaches its jurisdiction through a property, not an edge). Any other seed none of the edges touch
+  // stays in the trace but is left out of the graph, where it would float unconnected.
+  const nodeIds = new Set<string>(focal ? [focal.id] : [])
   for (const e of edges) nodeIds.add(e.from).add(e.to)
   const usedNodes = new Set<string>(focal ? [focal.id] : [])
   for (const e of edges) if (e.used) usedNodes.add(e.from).add(e.to)
