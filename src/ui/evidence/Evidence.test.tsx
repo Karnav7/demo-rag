@@ -389,3 +389,33 @@ describe('Evidence drawer (narrow)', () => {
     expect(screen.getByRole('tab', { name: 'Sources' })).toHaveAttribute('aria-selected', 'true')
   })
 })
+
+describe('tab style preview', () => {
+  afterEach(() => localStorage.removeItem('dummy-rag.tab-style'))
+
+  it('switches the tab bar style, keeps tabs working, and remembers the choice', async () => {
+    const user = setup()
+    const { container, unmount } = render(<Harness r={response()} />)
+    expect(container.querySelector('.ev')).toHaveClass('ev--line')
+    await user.click(screen.getByRole('radio', { name: 'Stat cards' }))
+    expect(container.querySelector('.ev')).toHaveClass('ev--cards')
+    await user.click(screen.getByRole('tab', { name: 'Sources' }))
+    expect(screen.getByRole('tab', { name: 'Sources' })).toHaveAttribute('aria-selected', 'true')
+    expect(localStorage.getItem('dummy-rag.tab-style')).toBe('cards')
+    unmount()
+    const again = render(<Harness r={response()} />)
+    expect(again.container.querySelector('.ev')).toHaveClass('ev--cards')
+  })
+
+  it('the icon rail is vertical: arrow up/down move between tabs', async () => {
+    localStorage.setItem('dummy-rag.tab-style', 'rail')
+    const user = setup()
+    render(<Harness r={response()} initial="facts" />)
+    expect(screen.getByRole('tablist', { name: 'Evidence' })).toHaveAttribute('aria-orientation', 'vertical')
+    screen.getByRole('tab', { name: 'Facts' }).focus()
+    await user.keyboard('{ArrowDown}')
+    expect(screen.getByRole('tab', { name: 'Sources' })).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{ArrowUp}')
+    expect(screen.getByRole('tab', { name: 'Facts' })).toHaveAttribute('aria-selected', 'true')
+  })
+})
