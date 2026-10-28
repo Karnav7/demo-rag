@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
+import type { Subgraph } from '../../domain/types'
 import { useReducedMotion } from '../theme/motion'
 import { H, W } from './Force'
 import { colorFor, DIM, useDocumentTheme, type GraphViewProps } from './graphStyle'
@@ -13,7 +14,7 @@ const ZOOM_MIN = 0.6
 const ZOOM_MAX = 2.4
 const PICK = 12 // px beyond a node's radius that still counts as a hit
 
-interface Projected {
+export interface Projected {
   id: string
   x: number
   y: number
@@ -32,6 +33,25 @@ function rotate(p: P3, yaw: number, pitch: number): P3 {
   return { x, y: p.y * cp - z1 * sp, z: p.y * sp + z1 * cp }
 }
 
+/** The view an Orbit opens with (light mode keeps it until the user drags). */
+export const ORBIT_START = { yaw: 0.6, pitch: -0.28, zoom: 1 }
+
+/** Perspective projection of the sphere layout into a w×h canvas (CSS px). */
+export function projectNodes(
+  nodes: Subgraph['nodes'],
+  sphere: Map<string, P3>,
+  v: { yaw: number; pitch: number; zoom: number },
+  w: number,
+  h: number,
+): Projected[] {
+  const R = Math.min(w, h) * 0.34 * v.zoom
+  return nodes.map((n) => {
+    const p = rotate(sphere.get(n.id)!, v.yaw, v.pitch)
+    const s = CAMERA / (CAMERA - p.z)
+    return { id: n.id, x: w / 2 + p.x * s * R, y: h / 2 + p.y * s * R, r: (n.seed ? 6.5 : 5) * s * Math.sqrt(v.zoom), depth: (p.z + 1) / 2 }
+  })
+}
+
 /**
  * A dependency-free pseudo-3D view: nodes sit on a sphere and are projected with perspective;
  * depth sets size and opacity, used nodes carry a soft accent glow. Drag rotates, the wheel zooms.
@@ -43,7 +63,7 @@ export function Orbit({ subgraph, dim, onNodeOpen }: GraphViewProps) {
   const theme = useDocumentTheme()
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const view = useRef({ yaw: 0.6, pitch: -0.28, zoom: 1, zoomTo: 1, spin: 0, inertia: 0 })
+  const view = useRef({ ...ORBIT_START, zoomTo: ORBIT_START.zoom, spin: 0, inertia: 0 })
   const ui = useRef({ hover: null as string | null, focus: null as string | null, inside: false })
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null)
   /** Set by a drag, consumed by the click that follows it. */
@@ -83,19 +103,7 @@ export function Orbit({ subgraph, dim, onNodeOpen }: GraphViewProps) {
       ctx?.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
 
-    const project = () => {
-      const v = view.current
-      const R = Math.min(w, h) * 0.34 * v.zoom
-      const out: Projected[] = []
-      for (const n of subgraph.nodes) {
-        const p = rotate(sphere.get(n.id)!, v.yaw, v.pitch)
-        const s = CAMERA / (CAMERA - p.z)
-        const depth = (p.z + 1) / 2
-        out.push({ id: n.id, x: w / 2 + p.x * s * R, y: h / 2 + p.y * s * R, r: (n.seed ? 6.5 : 5) * s * Math.sqrt(v.zoom), depth })
-      }
-      proj.current = out
-      return out
-    }
+    const project = () => (proj.current = projectNodes(subgraph.nodes, sphere, view.current, w, h))
 
     const draw = () => {
       const pts = project()

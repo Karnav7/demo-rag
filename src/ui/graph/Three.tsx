@@ -192,26 +192,38 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
     const usedLines = segs(true)
     const otherLines = segs(false)
 
-    // Particles along used edges.
+    // Particles along used edges: created only while motion is allowed, removed under reduced motion.
     const paths = edges.filter((e) => e.used).map((e) => [at(e.from), at(e.to)] as const)
-    const pGeo = track(new BufferGeometry())
-    const pPos = new Float32Array(paths.length * PER_EDGE * 3)
-    pGeo.setAttribute('position', new BufferAttribute(pPos, 3))
-    const pMat = track(new PointsMaterial({ size: 4.5, map: glow, transparent: true, depthWrite: false, sizeAttenuation: true }))
-    const particles = new Points(pGeo, pMat)
-    scene.add(particles)
     let flow = 0
+    let flowing: { points: Points; geo: BufferGeometry; mat: PointsMaterial; pos: Float32Array } | null = null
     const placeParticles = () => {
+      if (!flowing) return
       const tmp = new Vector3()
       paths.forEach(([a, b], i) => {
         for (let k = 0; k < PER_EDGE; k++) {
           const t = (flow + k / PER_EDGE) % 1
-          tmp.lerpVectors(a, b, t).toArray(pPos, (i * PER_EDGE + k) * 3)
+          tmp.lerpVectors(a, b, t).toArray(flowing!.pos, (i * PER_EDGE + k) * 3)
         }
       })
-      pGeo.attributes.position.needsUpdate = true
+      flowing.geo.attributes.position.needsUpdate = true
     }
-    placeParticles()
+    const startParticles = () => {
+      if (flowing || !paths.length) return
+      const geo = new BufferGeometry()
+      const pos = new Float32Array(paths.length * PER_EDGE * 3)
+      geo.setAttribute('position', new BufferAttribute(pos, 3))
+      const mat = new PointsMaterial({ size: 4.5, map: glow, transparent: true, depthWrite: false, sizeAttenuation: true })
+      flowing = { points: new Points(geo, mat), geo, mat, pos }
+      scene.add(flowing.points)
+      placeParticles()
+    }
+    const stopParticles = () => {
+      if (!flowing) return
+      scene.remove(flowing.points)
+      flowing.geo.dispose()
+      flowing.mat.dispose()
+      flowing = null
+    }
 
     // A ring under the focused/hovered node.
     const ringGeo = track(new BufferGeometry().setFromPoints(
@@ -241,7 +253,7 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
     const frame = (now: number) => {
       const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60
       last = now
-      if (paths.length) {
+      if (flowing) {
         flow = (flow + dt * PARTICLE_SPEED) % 1
         placeParticles()
       }
@@ -310,11 +322,15 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
       const om = otherLines.material as LineBasicMaterial
       om.color.copy(mute)
       om.opacity = 0.38 * (dim ? DIM : 1)
-      pMat.color.copy(accent)
-      pMat.opacity = dark ? 0.95 : 0.8
-      if (pMat.blending !== blending) (pMat.blending = blending), (pMat.needsUpdate = true)
+      if (reduced) stopParticles()
+      else startParticles()
+      if (flowing) {
+        const pm = flowing.mat
+        pm.color.copy(accent)
+        pm.opacity = dark ? 0.95 : 0.8
+        if (pm.blending !== blending) (pm.blending = blending), (pm.needsUpdate = true)
+      }
       ringMat.color.copy(ink)
-      particles.visible = !reduced && paths.length > 0
       controls.autoRotate = !reduced && dark // ambient motion is dark-only, and never under reduced motion
       controls.enableDamping = !reduced
       if (!reduced && !raf) raf = requestAnimationFrame(frame)
@@ -366,6 +382,12 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
     canvas.addEventListener('pointermove', onMove)
     canvas.addEventListener('pointerleave', onLeave)
     canvas.addEventListener('click', onClick)
+    // A lost context (GPU reset, too many contexts) would leave a blank canvas: show the fallback instead.
+    const onLost = (e: Event) => {
+      e.preventDefault()
+      live.current.onFail()
+    }
+    canvas.addEventListener('webglcontextlost', onLost)
 
     const size = () => {
       const w = wrap.clientWidth || W
@@ -398,6 +420,8 @@ function Scene3d({ subgraph, dim, onNodeOpen, onFail }: GraphViewProps & { onFai
       canvas.removeEventListener('pointermove', onMove)
       canvas.removeEventListener('pointerleave', onLeave)
       canvas.removeEventListener('click', onClick)
+      canvas.removeEventListener('webglcontextlost', onLost)
+      stopParticles()
       controls.removeEventListener('change', requestRender)
       controls.dispose()
       geometries.forEach((g) => g.dispose())
