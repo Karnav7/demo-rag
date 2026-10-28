@@ -1,23 +1,25 @@
-import { useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatResponse } from '../../domain/types'
 import { DUR, EASE, useReducedMotion } from '../theme/motion'
 import { CypherView } from './CypherView'
 import { FactsTable } from './FactsTable'
-import { GraphViews } from '../graph/GraphViews'
 import { firstCitedSection } from '../graph/graphStyle'
 import { HelpPopover } from './HelpPopover'
 import { SourcesList } from './SourcesList'
 import { TraceSteps } from './TraceSteps'
 import './evidence.css'
 
+/** The graph views (d3, layouts, Replay) load on first use, out of the main chunk. */
+const GraphViews = lazy(() => import('../graph/GraphViews').then((m) => ({ default: m.GraphViews })))
+
 export type EvidenceTab = 'graph' | 'facts' | 'sources' | 'cypher' | 'trace'
 
 const TABS: { id: EvidenceTab; label: string; help: string }[] = [
   { id: 'graph', label: 'Subgraph', help: 'The slice of the knowledge graph this answer was built from. Highlighted nodes and edges are the ones the answer relied on.' },
-  { id: 'facts', label: 'Facts', help: 'Relationships pulled from the graph, each with a confidence score. Filter them, sort by confidence, or keep only those the answer used.' },
+  { id: 'facts', label: 'Facts', help: 'Relationships pulled from the graph, each with a confidence score. Filter them, sort by any column, or keep only those the answer used.' },
   { id: 'sources', label: 'Sources', help: 'The passages behind the answer, grouped by document. Clicking a citation jumps to the passage it points at.' },
-  { id: 'cypher', label: 'Cypher', help: 'The graph queries that ran for this answer, one per retrieval stage. Copy any of them to rerun against the same graph.' },
+  { id: 'cypher', label: 'Cypher', help: 'The graph queries that ran for this answer, one per retrieval stage. Copy one, or all of them, to rerun against the same graph.' },
   { id: 'trace', label: 'Trace', help: 'How long each pipeline stage took, with bars scaled to the slowest stage.' },
 ]
 
@@ -101,14 +103,16 @@ export function EvidencePanel({
             transition={fade}
           >
             {tab === 'graph' && (
-              <GraphViews
-                subgraph={response.subgraph}
-                trace={response.trace}
-                onNodeOpen={(id) => {
-                  const s = firstCitedSection(response.subgraph, id)
-                  if (s) onOpenSection?.(s)
-                }}
-              />
+              <Suspense fallback={<p className="ev-empty">Loading graph…</p>}>
+                <GraphViews
+                  subgraph={response.subgraph}
+                  trace={response.trace}
+                  onNodeOpen={(id) => {
+                    const s = firstCitedSection(response.subgraph, id)
+                    if (s) onOpenSection?.(s)
+                  }}
+                />
+              </Suspense>
             )}
             {tab === 'facts' && <FactsTable facts={response.facts} />}
             {tab === 'sources' && <SourcesList sources={response.sources} highlight={highlightSectionId} />}
